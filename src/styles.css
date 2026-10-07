@@ -1,0 +1,14 @@
+body {
+  margin: 24px;
+  font-family: sans-serif;
+}
+
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+nav a.active {
+  font-weight: bold;
+}
