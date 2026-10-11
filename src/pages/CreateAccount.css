@@ -1,0 +1,107 @@
+/* Sizes and colors are measured from the Create Account wireframe. */
+
+.ca-card {
+  box-sizing: border-box;
+  width: 532px;
+  height: 736px;
+  margin: 24px auto 0;
+  padding: 39px 0 0 54px;
+  border: 1px solid #777;
+  border-radius: 80px;
+  font-family: Helvetica, Arial, sans-serif;
+  color: #000;
+}
+
+.ca-card .ca-title {
+  margin: 0 0 0 -54px;
+  font-size: 26px;
+  line-height: 26px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.ca-field {
+  margin-top: 26px;
+}
+
+.ca-title + .ca-field {
+  margin-top: 39px;
+}
+
+.ca-field label {
+  display: block;
+  margin: 0 0 11px 2px;
+  font-size: 12px;
+  line-height: 12px;
+  font-weight: bold;
+}
+
+.ca-field input {
+  box-sizing: border-box;
+  display: block;
+  width: 421px;
+  height: 41px;
+  margin: 0;
+  padding: 0 0 0 1px;
+  border: 1px solid #999;
+  border-radius: 6px;
+  color: #000;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.ca-field input::placeholder {
+  color: #000;
+  opacity: 1;
+}
+
+.ca-terms {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 43px 0 0 3px;
+  font-size: 12px;
+  line-height: 12px;
+}
+
+.ca-terms input {
+  appearance: none;
+  box-sizing: border-box;
+  width: 7px;
+  height: 8px;
+  margin: 0;
+  border: 1px solid #808080;
+  border-radius: 0;
+}
+
+.ca-terms input:checked {
+  background: #000;
+}
+
+.ca-submit {
+  box-sizing: border-box;
+  display: block;
+  width: 421px;
+  height: 46px;
+  margin-top: 26px;
+  padding: 0;
+  border: 1px solid #555;
+  border-radius: 5px;
+  background: #ddd;
+  color: #000;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.ca-card .ca-login {
+  margin: 21px 0 0 -54px;
+  font-size: 12px;
+  line-height: 12px;
+  text-align: center;
+}
+
+.ca-login a {
+  color: inherit;
+  text-decoration: none;
+}

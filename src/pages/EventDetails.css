@@ -1,0 +1,140 @@
+/* Sizes and colors are measured from the Event Details wireframe. */
+
+.ed-page {
+  font-family: Helvetica, Arial, sans-serif;
+  color: #000;
+  margin-top: 34px;
+}
+
+.ed-page p,
+.ed-page h1 {
+  margin: 0;
+}
+
+.ed-back {
+  display: inline-block;
+  margin: 0 0 22px 2px;
+  font-size: 13px;
+  line-height: 13px;
+  color: #000;
+  text-decoration: none;
+}
+
+.ed-columns {
+  display: flex;
+  align-items: flex-start;
+  gap: 49px;
+}
+
+/* Left column */
+
+.ed-main {
+  width: 611px;
+  flex: none;
+}
+
+.ed-image {
+  box-sizing: border-box;
+  width: 611px;
+  height: 301px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e9e9e9;
+  border: 1px solid #aaa;
+  font-size: 20px;
+}
+
+.ed-page .ed-title {
+  margin: 28px 0 0 2px;
+  font-size: 28px;
+  line-height: 28px;
+  font-weight: bold;
+}
+
+.ed-page .ed-when {
+  margin: 19px 0 0 2px;
+  font-size: 14px;
+  line-height: 14px;
+}
+
+.ed-page .ed-where {
+  margin: 16px 0 0 2px;
+  font-size: 14px;
+  line-height: 14px;
+}
+
+.ed-page .ed-description {
+  max-width: 600px;
+  margin: 51px 0 0 2px;
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+/* Right column */
+
+.ed-side {
+  width: 331px;
+  flex: none;
+}
+
+.ed-info {
+  box-sizing: border-box;
+  height: 271px;
+  padding: 53px 0 0 14px;
+  border: 1px solid #777;
+  font-size: 13px;
+  line-height: 13px;
+}
+
+.ed-info p {
+  margin-left: 12px;
+}
+
+.ed-page .ed-verified {
+  margin-top: 28px;
+}
+
+.ed-page .ed-accessibility {
+  margin-top: 22px;
+}
+
+.ed-page .ed-transportation {
+  margin-top: 32px;
+}
+
+.ed-actions {
+  display: flex;
+  gap: 14px;
+  margin-top: 22px;
+}
+
+.ed-actions button {
+  box-sizing: border-box;
+  width: 141px;
+  height: 43px;
+  padding: 0;
+  border: 1px solid #555;
+  border-radius: 5px;
+  background: #fff;
+  color: #000;
+  font-family: inherit;
+  font-size: 13px;
+}
+
+.ed-actions .ed-rsvp {
+  background: #ddd;
+  font-weight: bold;
+}
+
+.ed-map {
+  box-sizing: border-box;
+  height: 191px;
+  margin-top: 29px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ededed;
+  border: 1px solid #999;
+  font-size: 16px;
+}
