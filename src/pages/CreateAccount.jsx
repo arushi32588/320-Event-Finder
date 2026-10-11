@@ -1,4 +1,5 @@
 import { Link } from 'react-router';
+import '../theme.css';
 import './CreateAccount.css';
 
 const fields = [

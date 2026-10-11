@@ -1,48 +1,89 @@
-import { Link } from 'react-router';
+import { useState } from 'react';
+import { Link, useParams } from 'react-router';
+import { getEventById } from '../data/events.js';
+import '../theme.css';
 import './EventDetails.css';
 
-// Placeholder event matching the wireframe until event data is wired up.
-const event = {
-  title: 'Community Outdoor Movie Night',
-  date: 'Friday, Oct 16',
-  time: '7:00 PM – 9:30 PM',
-  location: 'Amherst Town Common',
-  price: 'Free',
-  ages: 'All ages',
-  description:
-    'Description of the event goes here. Include accessibility, indoor/outdoor details, transportation options, and external contact information.',
-  organizer: 'Amherst Community Group',
-  verified: true,
-  accessibility: 'Wheelchair accessible',
-  transportation: 'Bus / Walk / Parking',
-};
+const timeZone = 'America/New_York';
+const dateFormat = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone });
+const timeFormat = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone });
+
+// "Friday, Oct 16 • 7:00 PM – 9:30 PM"
+function formatWhen(startsAt, endsAt) {
+  const start = new Date(startsAt);
+  const times = endsAt
+    ? `${timeFormat.format(start)} – ${timeFormat.format(new Date(endsAt))}`
+    : timeFormat.format(start);
+  return `${dateFormat.format(start)} • ${times}`;
+}
 
 export default function EventDetails() {
+  const { id } = useParams();
+  const event = getEventById(id);
+
+  if (!event) {
+    return (
+      <div className="ed-page">
+        <h1 className="ed-title">Event not found</h1>
+        <Link className="ed-back" to="/events">← Back to events</Link>
+      </div>
+    );
+  }
+
+  // Keyed by id so Save/RSVP state resets when switching events.
+  return <EventDetailsContent key={event.id} event={event} />;
+}
+
+function EventDetailsContent({ event }) {
+  const [saved, setSaved] = useState(false);
+  const [going, setGoing] = useState(false);
+  const where = [event.location, event.price, event.ages].filter(Boolean).join(' • ');
+
   return (
     <div className="ed-page">
       <Link className="ed-back" to="/events">← Back to events</Link>
 
       <div className="ed-columns">
         <div className="ed-main">
-          <div className="ed-image">EVENT IMAGE</div>
+          {event.imageUrl
+            ? <img className="ed-image" src={event.imageUrl} alt="" />
+            : <div className="ed-image" aria-hidden="true" />}
           <h1 className="ed-title">{event.title}</h1>
-          <p className="ed-when">{event.date} • {event.time}</p>
-          <p className="ed-where">{event.location} • {event.price} • {event.ages}</p>
+          <p className="ed-when">{formatWhen(event.startsAt, event.endsAt)}</p>
+          <p className="ed-where">{where}</p>
           <p className="ed-description">{event.description}</p>
         </div>
 
         <aside className="ed-side">
-          <div className="ed-info">
-            <p className="ed-organizer">Organizer: {event.organizer}</p>
+          <div className="ed-card ed-info">
+            <p><span className="ed-label">Organizer:</span> {event.organizer}</p>
             {event.verified && <p className="ed-verified">✓ Verified organizer</p>}
-            <p className="ed-accessibility">Accessibility: {event.accessibility}</p>
-            <p className="ed-transportation">Transportation: {event.transportation}</p>
+            {event.accessibility && (
+              <p><span className="ed-label">Accessibility:</span> {event.accessibility}</p>
+            )}
+            {event.transportation && (
+              <p><span className="ed-label">Transportation:</span> {event.transportation}</p>
+            )}
             <div className="ed-actions">
-              <button type="button" className="ed-save">Save Event</button>
-              <button type="button" className="ed-rsvp">RSVP</button>
+              <button
+                type="button"
+                className="ed-save"
+                aria-pressed={saved}
+                onClick={() => setSaved(!saved)}
+              >
+                {saved ? 'Saved' : 'Save Event'}
+              </button>
+              <button
+                type="button"
+                className="ed-rsvp"
+                aria-pressed={going}
+                onClick={() => setGoing(!going)}
+              >
+                {going ? 'Going' : 'RSVP'}
+              </button>
             </div>
           </div>
-          <div className="ed-map">MAP / LOCATION</div>
+          <div className="ed-card ed-map">Map / location</div>
         </aside>
       </div>
     </div>

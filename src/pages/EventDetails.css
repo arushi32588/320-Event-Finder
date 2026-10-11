@@ -1,140 +1,157 @@
-/* Sizes and colors are measured from the Event Details wireframe. */
-
 .ed-page {
-  font-family: Helvetica, Arial, sans-serif;
-  color: #000;
-  margin-top: 34px;
-}
-
-.ed-page p,
-.ed-page h1 {
-  margin: 0;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 0 48px;
+  font-family: var(--font);
+  color: var(--text);
 }
 
 .ed-back {
   display: inline-block;
-  margin: 0 0 22px 2px;
-  font-size: 13px;
-  line-height: 13px;
-  color: #000;
+  margin-bottom: 20px;
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 500;
   text-decoration: none;
 }
 
+.ed-back:hover {
+  text-decoration: underline;
+}
+
 .ed-columns {
-  display: flex;
-  align-items: flex-start;
-  gap: 49px;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  gap: 40px;
+  align-items: start;
 }
 
-/* Left column */
-
-.ed-main {
-  width: 611px;
-  flex: none;
-}
+/* Main column */
 
 .ed-image {
-  box-sizing: border-box;
-  width: 611px;
-  height: 301px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #e9e9e9;
-  border: 1px solid #aaa;
-  font-size: 20px;
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  object-fit: cover;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #8e2a2a 0%, #c86a6a 55%, #f6e2df 100%);
 }
 
 .ed-page .ed-title {
-  margin: 28px 0 0 2px;
-  font-size: 28px;
-  line-height: 28px;
-  font-weight: bold;
-}
-
-.ed-page .ed-when {
-  margin: 19px 0 0 2px;
-  font-size: 14px;
-  line-height: 14px;
-}
-
-.ed-page .ed-where {
-  margin: 16px 0 0 2px;
-  font-size: 14px;
-  line-height: 14px;
-}
-
-.ed-page .ed-description {
-  max-width: 600px;
-  margin: 51px 0 0 2px;
-  font-size: 13px;
+  margin: 28px 0 12px;
+  font-size: 32px;
   line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
-/* Right column */
+.ed-when,
+.ed-where {
+  margin: 0 0 6px;
+  font-size: 16px;
+  color: var(--text-muted);
+}
+
+.ed-description {
+  max-width: 70ch;
+  margin: 24px 0 0;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+/* Sidebar */
 
 .ed-side {
-  width: 331px;
-  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
-.ed-info {
+.ed-card {
   box-sizing: border-box;
-  height: 271px;
-  padding: 53px 0 0 14px;
-  border: 1px solid #777;
-  font-size: 13px;
-  line-height: 13px;
+  padding: 24px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
 }
 
 .ed-info p {
-  margin-left: 12px;
+  margin: 0 0 12px;
+  font-size: 15px;
+  line-height: 1.5;
 }
 
-.ed-page .ed-verified {
-  margin-top: 28px;
+.ed-label {
+  color: var(--text-muted);
 }
 
-.ed-page .ed-accessibility {
-  margin-top: 22px;
-}
-
-.ed-page .ed-transportation {
-  margin-top: 32px;
+.ed-info .ed-verified {
+  color: var(--success);
+  font-weight: 600;
 }
 
 .ed-actions {
-  display: flex;
-  gap: 14px;
-  margin-top: 22px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 20px;
 }
 
 .ed-actions button {
-  box-sizing: border-box;
-  width: 141px;
-  height: 43px;
-  padding: 0;
-  border: 1px solid #555;
-  border-radius: 5px;
-  background: #fff;
-  color: #000;
+  height: 44px;
+  padding: 0 12px;
+  border: 1.5px solid var(--accent);
+  border-radius: 8px;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.ed-actions button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.ed-actions .ed-save {
+  background: #fff;
+  color: var(--accent);
+}
+
+.ed-actions .ed-save:hover,
+.ed-actions .ed-save[aria-pressed='true'] {
+  background: var(--accent-soft);
 }
 
 .ed-actions .ed-rsvp {
-  background: #ddd;
-  font-weight: bold;
+  background: var(--accent);
+  color: #fff;
+}
+
+.ed-actions .ed-rsvp:hover,
+.ed-actions .ed-rsvp[aria-pressed='true'] {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }
 
 .ed-map {
-  box-sizing: border-box;
-  height: 191px;
-  margin-top: 29px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #ededed;
-  border: 1px solid #999;
-  font-size: 16px;
+  height: 200px;
+  background: var(--surface-warm);
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+@media (max-width: 800px) {
+  .ed-columns {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .ed-page .ed-title {
+    font-size: 26px;
+  }
 }
