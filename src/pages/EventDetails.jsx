@@ -1,21 +1,12 @@
-import { useState } from "react";
-import { Link, useParams } from "react-router";
-import { getEventById } from "../data/events.js";
-import "../theme.css";
-import "./EventDetails.css";
+import { useState } from 'react';
+import { Link, useParams } from 'react-router';
+import { getEventById } from '../data/events.js';
+import '../theme.css';
+import './EventDetails.css';
 
-const timeZone = "America/New_York";
-const dateFormat = new Intl.DateTimeFormat("en-US", {
-  weekday: "long",
-  month: "short",
-  day: "numeric",
-  timeZone,
-});
-const timeFormat = new Intl.DateTimeFormat("en-US", {
-  hour: "numeric",
-  minute: "2-digit",
-  timeZone,
-});
+const timeZone = 'America/New_York';
+const dateFormat = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone });
+const timeFormat = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', timeZone });
 
 // "Friday, Oct 16 • 7:00 PM – 9:30 PM"
 function formatWhen(startsAt, endsAt) {
@@ -34,9 +25,7 @@ export default function EventDetails() {
     return (
       <div className="ed-page">
         <h1 className="ed-title">Event not found</h1>
-        <Link className="ed-back" to="/">
-          ← Back to events
-        </Link>
+        <Link className="ed-back" to="/">← Back to events</Link>
       </div>
     );
   }
@@ -48,23 +37,17 @@ export default function EventDetails() {
 function EventDetailsContent({ event }) {
   const [saved, setSaved] = useState(false);
   const [going, setGoing] = useState(false);
-  const where = [event.location, event.price, event.ages]
-    .filter(Boolean)
-    .join(" • ");
+  const where = [event.location, event.price, event.ages].filter(Boolean).join(' • ');
 
   return (
     <div className="ed-page">
-      <Link className="ed-back" to="/">
-        ← Back to events
-      </Link>
+      <Link className="ed-back" to="/">← Back to events</Link>
 
       <div className="ed-columns">
         <div className="ed-main">
-          {event.imageUrl ? (
-            <img className="ed-image" src={event.imageUrl} alt="" />
-          ) : (
-            <div className="ed-image" aria-hidden="true" />
-          )}
+          {event.imageUrl
+            ? <img className="ed-image" src={event.imageUrl} alt="" />
+            : <div className="ed-image" aria-hidden="true" />}
           <h1 className="ed-title">{event.title}</h1>
           <p className="ed-when">{formatWhen(event.startsAt, event.endsAt)}</p>
           <p className="ed-where">{where}</p>
@@ -73,23 +56,13 @@ function EventDetailsContent({ event }) {
 
         <aside className="ed-side">
           <div className="ed-card ed-info">
-            <p>
-              <span className="ed-label">Organizer:</span> {event.organizer}
-            </p>
-            {event.verified && (
-              <p className="ed-verified">✓ Verified organizer</p>
-            )}
+            <p><span className="ed-label">Organizer:</span> {event.organizer}</p>
+            {event.verified && <p className="ed-verified">✓ Verified organizer</p>}
             {event.accessibility && (
-              <p>
-                <span className="ed-label">Accessibility:</span>{" "}
-                {event.accessibility}
-              </p>
+              <p><span className="ed-label">Accessibility:</span> {event.accessibility}</p>
             )}
             {event.transportation && (
-              <p>
-                <span className="ed-label">Transportation:</span>{" "}
-                {event.transportation}
-              </p>
+              <p><span className="ed-label">Transportation:</span> {event.transportation}</p>
             )}
             <div className="ed-actions">
               <button
@@ -98,7 +71,7 @@ function EventDetailsContent({ event }) {
                 aria-pressed={saved}
                 onClick={() => setSaved(!saved)}
               >
-                {saved ? "Saved" : "Save Event"}
+                {saved ? 'Saved' : 'Save Event'}
               </button>
               <button
                 type="button"
@@ -106,7 +79,7 @@ function EventDetailsContent({ event }) {
                 aria-pressed={going}
                 onClick={() => setGoing(!going)}
               >
-                {going ? "Going" : "RSVP"}
+                {going ? 'Going' : 'RSVP'}
               </button>
             </div>
           </div>
