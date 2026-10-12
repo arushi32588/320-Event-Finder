@@ -24,7 +24,12 @@ const mainFilters = [
   { id: "free", label: "Free" },
 ];
 
-const moreFilters = ["Age", "Category", "Accessible", "Indoor/Outdoor"];
+const moreFilters = [
+  { id: "age", label: "Age" },
+  { id: "category", label: "Category" },
+  { id: "accessible", label: "Accessible" },
+  { id: "indoor", label: "Indoor/Outdoor" },
+];
 
 function matchesFilter(event, filterId) {
   const start = new Date(event.startsAt);
@@ -35,6 +40,7 @@ function matchesFilter(event, filterId) {
     return start >= now && start <= weekFromNow;
   }
   if (filterId === "free") return event.price === "Free";
+  if (filterId === "accessible") return Boolean(event.accessibility);
   return true;
 }
 
@@ -86,9 +92,15 @@ export default function Home() {
 
       {showMore && (
         <div className="home-filters home-filters-more">
-          {moreFilters.map((label) => (
-            <button key={label} type="button" className="home-chip">
-              {label}
+          {moreFilters.map((filter) => (
+            <button
+              key={filter.id}
+              type="button"
+              className="home-chip"
+              aria-pressed={active.includes(filter.id)}
+              onClick={() => toggle(active, setActive, filter.id)}
+            >
+              {filter.label}
             </button>
           ))}
         </div>
