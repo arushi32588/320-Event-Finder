@@ -25,7 +25,7 @@ export default function EventDetails() {
     return (
       <div className="ed-page">
         <h1 className="ed-title">Event not found</h1>
-        <Link className="ed-back" to="/events">← Back to events</Link>
+        <Link className="ed-back" to="/">← Back to events</Link>
       </div>
     );
   }
@@ -41,7 +41,7 @@ function EventDetailsContent({ event }) {
 
   return (
     <div className="ed-page">
-      <Link className="ed-back" to="/events">← Back to events</Link>
+      <Link className="ed-back" to="/">← Back to events</Link>
 
       <div className="ed-columns">
         <div className="ed-main">
