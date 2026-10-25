@@ -3,6 +3,9 @@
 Basic React frontend skeleton using Vite and React Router. Each page contains
 only a heading and a "page working" message, with shared navigation links.
 
+The backend is a separate Next.js + TypeScript API in [`backend/`](backend/README.md).
+Run it alongside the frontend; Vite proxies `/api/*` requests to it on port 3000.
+
 ## Run locally
 
 Use Node.js 20.19+ or 22.12+.
