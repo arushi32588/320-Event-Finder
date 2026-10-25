@@ -22,6 +22,26 @@ npm run build
 npm run preview
 ```
 
+## Test the Supabase schema
+
+`supabase/tests/` checks the rules in `supabase/schema.sql`. The files are
+split by area: users, organizers, events, announcements, RSVPs and saved
+events, and conversations and messages. They check defaults, duplicates,
+required values, a few invalid values, and what happens when a related row
+is deleted.
+
+The tests create temporary auth users, so they need the service role key from
+Project Settings > API. Put it in `supabase/.env` with `SUPABASE_URL`, then run:
+
+```sh
+npm --prefix supabase install
+npm run test:schema
+```
+
+The tests are skipped when either variable is missing. `npm test` also reads
+`supabase/.env.local`, then `backend/.env` and `backend/.env.local`, when a
+variable is not already set.
+
 ## Routes
 
 - `/`: Home
