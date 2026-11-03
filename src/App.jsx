@@ -6,6 +6,7 @@ import EventDetails from './pages/EventDetails.jsx';
 import Login from './pages/Login.jsx';
 import Profile from './pages/Profile.jsx';
 import CreateAccount from './pages/CreateAccount.jsx';
+import AdminDashboard from './pages/AdminDashboard.jsx';
 import NotFound from './pages/NotFound.jsx';
 
 export default function App() {
@@ -18,6 +19,7 @@ export default function App() {
         <Route path="login" element={<Login />} />
         <Route path="profile" element={<Profile />} />
         <Route path="signup" element={<CreateAccount />} />
+        <Route path="admin" element={<AdminDashboard />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
