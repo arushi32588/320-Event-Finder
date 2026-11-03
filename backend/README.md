@@ -24,9 +24,9 @@ order, in the Supabase SQL editor. The migration adds the event fields the
 pages display (description, end time, price, ages, accessibility,
 transportation, image), `users.date_of_birth`, and a trigger that creates the
 `public.users` row whenever someone signs up.
-The admin migration adds the organizer application fields, review timestamps, and
-the admin-only functions behind the Admin Dashboard. To make someone an admin, set
-their `users.role` to `admin` in the Supabase table editor.
+The admin migration adds the rejection reason and the admin-only functions behind
+the Admin Dashboard. To make someone an admin, set their `users.role` to `admin`
+in the Supabase table editor.
 
 ## Endpoints
 
@@ -37,6 +37,7 @@ their `users.role` to `admin` in the Supabase table editor.
 | GET    | `/api/events/:id`   | `{ event }`; 400 for a non-numeric id; 404 if not found      |
 | POST   | `/api/auth/signup`  | 201 `{ user, session, needsEmailConfirmation }`; 409 if taken |
 | POST   | `/api/auth/login`   | `{ user, session }`; 401 for a wrong email or password      |
+| GET    | `/api/me/profile`   | `{ profile }`; 401 if not logged in                          |
 | GET    | `/api/admin/verification-requests` | `{ requests }`; admins only                  |
 | POST   | `/api/admin/verification-requests/:id/approve` | `{ request }`; admins only       |
 | POST   | `/api/admin/verification-requests/:id/reject`  | `{ request }`; admins only       |
@@ -57,6 +58,44 @@ Signup body: `{ name, email, dateOfBirth, password, confirmPassword,
 acceptedTerms }`. `dateOfBirth` is `MM / DD / YYYY` (as typed in the form) or
 `YYYY-MM-DD`; passwords are 8-72 characters. Login body: `{ email, password }`.
 Invalid input returns 400 `{ error, fields }`, with one message per field.
+
+The profile has `id`, `email`, `name`, `dateOfBirth`, `role`,
+`organizerStatus` (`none`, `pending`, `approved` or `rejected`) and
+`organizationName`. Send the login token as `Authorization: Bearer <token>`.
+
+### Organization verification request
+
+Both endpoints need `Authorization: Bearer <access token>`; without a valid
+login they return 401. They call the `submit_verification_request` and
+`get_my_verification_request` database functions, so run
+`../supabase/migrations/20261103_organizer_verification_submit.sql` first.
+
+`POST /api/organizer/verification-request` submits an application. Body:
+
+| Field              | Required | Notes                                  |
+| ------------------ | -------- | -------------------------------------- |
+| `organizationName` | yes      | up to 255 characters                   |
+| `description`      | no       | up to 5000 characters                  |
+| `address`          | no       | up to 255 characters                   |
+| `website`          | no       | `http://` or `https://`, up to 2048    |
+| `contactEmail`     | no       | a valid email, up to 255 characters    |
+| `documentUrl`      | no       | `http://` or `https://`, up to 255     |
+
+It creates or updates the user's organizer profile (status `pending`) and adds
+a pending request, all in one transaction.
+
+- 201 `{ request }` on success.
+- 400 `{ error, fields }` with one message per invalid field.
+- 409 `{ error }` if the user already has a pending request or is already approved.
+- 500 if the database fails.
+
+`GET /api/organizer/verification-request` returns `{ request }` for the user's
+latest request, or `{ request: null }` if they never applied. A request is
+`{ id, organizationName, description, address, website, contactEmail,
+documentUrl, status, rejectionReason, submittedAt, reviewedAt }`, where
+`status` is `pending`, `approved` or `rejected`.
+
+### Admin Dashboard
 
 The admin endpoints (Admin Dashboard) need `Authorization: Bearer <token>` from
 a user whose `users.role` is `admin`: 401 if not logged in, 403 otherwise.
@@ -98,11 +137,13 @@ src/
   app/api/events/[id]/route.ts  Single event
   app/api/auth/signup/route.ts  Create account
   app/api/auth/login/route.ts   Log in
+  app/api/me/profile/route.ts   Profile page
   data/sample-events.ts         Placeholder events (used until Supabase is configured)
   app/api/admin/...             Admin Dashboard: list, approve, reject
   lib/events.ts                 Event type, filters, Supabase queries
   lib/auth.ts                   Signup/login validation and error handling
   lib/admin.ts                  Admin check, verification request review
   lib/supabase.ts               Supabase clients (null until configured)
+  lib/profile.ts                Profile info and organizer status
 tests/                          Vitest tests
 ```
