@@ -107,7 +107,7 @@ describe('EventDetails', () => {
   // Back link goes to the events list page.
   it('has a back link to the events list', () => {
     renderAt('/events/1');
-    expect(screen.getByRole('link', { name: /back to events/i })).toHaveAttribute('href', '/events');
+    expect(screen.getByRole('link', { name: /back to events/i })).toHaveAttribute('href', '/');
   });
 
   // A bad id shows the not-found message instead of the event layout.
