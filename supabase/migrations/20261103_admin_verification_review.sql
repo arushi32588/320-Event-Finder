@@ -1,9 +1,8 @@
--- Run after 20261025_event_fields_and_signup_trigger.sql. Adds what the Admin
--- Dashboard needs: the application details admins review, timestamps, and two
--- admin-only functions for listing and reviewing verification requests.
+-- Run after 20261102_organizer_verification_access.sql, which provides
+-- public.is_admin(). Adds what the Admin Dashboard needs: the rejection reason
+-- and two admin-only functions for listing and reviewing verification requests.
 
--- The Organization Verification form's fields, plus the review outcome.
--- IF NOT EXISTS so this is safe alongside other Sprint 4 schema work.
+-- IF NOT EXISTS so this is safe alongside the other Sprint 4 schema migrations.
 ALTER TABLE public.organizer_verification_requests
   ADD COLUMN IF NOT EXISTS description TEXT,
   ADD COLUMN IF NOT EXISTS address VARCHAR(255),
@@ -22,18 +21,9 @@ CREATE INDEX IF NOT EXISTS organizer_verification_requests_pending_idx
 -- is on these tables, which is why each one checks for an admin itself.
 -- Errors use custom codes (EF403, EF404, EF409) that the API turns into
 -- matching HTTP statuses.
-CREATE OR REPLACE FUNCTION public.is_admin()
-RETURNS BOOLEAN
-LANGUAGE sql
-STABLE
-SECURITY DEFINER SET search_path = ''
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.users u WHERE u.id = auth.uid() AND u.role = 'admin'
-  );
-$$;
-
--- Lists requests oldest first. A NULL status lists all of them.
+-- Lists requests oldest first. A NULL status lists all of them. The form's
+-- details can be in either set of columns, so this reads the
+-- organization_* ones first and falls back to the shorter names.
 CREATE OR REPLACE FUNCTION public.list_verification_requests(p_status public.verification_status DEFAULT NULL)
 RETURNS TABLE (
   id BIGINT,
@@ -63,10 +53,10 @@ BEGIN
   RETURN QUERY
     SELECT
       r.id,
-      p.organization_name::TEXT,
-      r.description,
-      r.address::TEXT,
-      r.website::TEXT,
+      COALESCE(r.organization_name, p.organization_name)::TEXT,
+      COALESCE(r.organization_description, r.description),
+      COALESCE(r.organization_address, r.address)::TEXT,
+      COALESCE(r.website_or_social_media, r.website)::TEXT,
       r.contact_email::TEXT,
       r.document_url::TEXT,
       r.status,
@@ -159,9 +149,7 @@ $$;
 
 -- New functions are callable by everyone unless this is revoked. Only logged-in
 -- users can reach them, and the checks above then require an admin.
-REVOKE EXECUTE ON FUNCTION public.is_admin() FROM PUBLIC, anon;
 REVOKE EXECUTE ON FUNCTION public.list_verification_requests(public.verification_status) FROM PUBLIC, anon;
 REVOKE EXECUTE ON FUNCTION public.review_verification_request(BIGINT, public.verification_status, TEXT) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.list_verification_requests(public.verification_status) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.review_verification_request(BIGINT, public.verification_status, TEXT) TO authenticated;
