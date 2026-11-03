@@ -1,0 +1,188 @@
+/* Same card, input and button style as Login / Create Account, a bit wider for the longer form */
+
+.ov-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 0 56px;
+  font-family: var(--font);
+  color: var(--text);
+}
+
+.ov-page .ov-title {
+  margin: 0 0 10px;
+  font-size: 32px;
+  line-height: 1.2;
+  font-weight: 700;
+  text-align: center;
+}
+
+.ov-page .ov-subtitle {
+  max-width: 640px;
+  margin: 0 auto 32px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.ov-card {
+  box-sizing: border-box;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 40px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.ov-field + .ov-field {
+  margin-top: 20px;
+}
+
+.ov-field label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ov-required {
+  color: var(--accent);
+}
+
+.ov-field input,
+.ov-field textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0 12px;
+  background: #fff;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 15px;
+}
+
+.ov-field input {
+  height: 44px;
+}
+
+.ov-field textarea {
+  padding: 10px 12px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.ov-field input::placeholder,
+.ov-field textarea::placeholder {
+  color: #9c938d;
+}
+
+.ov-field input:focus,
+.ov-field textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(136, 28, 28, 0.15);
+}
+
+.ov-field [aria-invalid="true"] {
+  border-color: var(--accent);
+}
+
+.ov-page .ov-error {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--accent);
+}
+
+/* Bottom row: upload on the left, submit on the right (as in the wireframe) */
+
+.ov-bottom-row {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ov-field .ov-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.ov-field .ov-upload {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  max-width: 280px;
+  height: 48px;
+  margin: 0;
+  overflow: hidden;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: 8px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.ov-field .ov-upload:hover,
+.ov-file-input:focus-visible + .ov-upload {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.ov-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  padding: 0 28px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.ov-submit:hover {
+  background: var(--accent-hover);
+}
+
+.ov-submit:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Confirmation after submit */
+
+.ov-success {
+  text-align: center;
+}
+
+.ov-success .ov-subtitle {
+  margin-bottom: 24px;
+}
+
+@media (max-width: 600px) {
+  .ov-card {
+    padding: 24px;
+  }
+
+  .ov-bottom-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ov-field .ov-upload {
+    max-width: none;
+  }
+}
