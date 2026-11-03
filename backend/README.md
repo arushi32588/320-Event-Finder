@@ -34,6 +34,7 @@ transportation, image), `users.date_of_birth`, and a trigger that creates the
 | GET    | `/api/events/:id`   | `{ event }`; 400 for a non-numeric id; 404 if not found      |
 | POST   | `/api/auth/signup`  | 201 `{ user, session, needsEmailConfirmation }`; 409 if taken |
 | POST   | `/api/auth/login`   | `{ user, session }`; 401 for a wrong email or password      |
+| GET    | `/api/me/profile`   | `{ profile }`; 401 if not logged in                          |
 
 `/api/events` query parameters (Home page):
 
@@ -51,6 +52,10 @@ Signup body: `{ name, email, dateOfBirth, password, confirmPassword,
 acceptedTerms }`. `dateOfBirth` is `MM / DD / YYYY` (as typed in the form) or
 `YYYY-MM-DD`; passwords are 8-72 characters. Login body: `{ email, password }`.
 Invalid input returns 400 `{ error, fields }`, with one message per field.
+
+The profile has `id`, `email`, `name`, `dateOfBirth`, `role`,
+`organizerStatus` (`none`, `pending`, `approved` or `rejected`) and
+`organizationName`. Send the login token as `Authorization: Bearer <token>`.
 
 Without Supabase configured, the event endpoints serve the placeholder data in
 `src/data/sample-events.ts` and the auth endpoints return 503.
@@ -78,9 +83,11 @@ src/
   app/api/events/[id]/route.ts  Single event
   app/api/auth/signup/route.ts  Create account
   app/api/auth/login/route.ts   Log in
+  app/api/me/profile/route.ts   Profile page
   data/sample-events.ts         Placeholder events (used until Supabase is configured)
   lib/events.ts                 Event type, filters, Supabase queries
   lib/auth.ts                   Signup/login validation and error handling
   lib/supabase.ts               Supabase clients (null until configured)
+  lib/profile.ts                Profile info and organizer status
 tests/                          Vitest tests
 ```
