@@ -33,26 +33,38 @@ export function emptyState() {
 
 async function createAuthUser(state) {
   const email = `schema-test-${randomUUID()}@example.com`;
+  const password = `Pw-${randomUUID()}-9a`;
   const authUser = await db.auth.admin.createUser({
     email,
-    password: `Pw-${randomUUID()}-9a`,
+    password,
     email_confirm: true,
   });
   saved(authUser);
   state.authUserIds.push(authUser.data.user.id);
-  return { id: authUser.data.user.id, email };
+  return { id: authUser.data.user.id, email, password };
 }
 
-// Role is left blank so the database default of "attendee" can be checked.
+async function publicUserFor(authUser, name) {
+  const existing = saved(await db.from('users').select().eq('id', authUser.id).maybeSingle());
+  if (existing) {
+    return saved(await db.from('users').update({ name }).eq('id', authUser.id).select().single());
+  }
+  return saved(await db.from('users').insert({ id: authUser.id, name, email: authUser.email }).select().single());
+}
+
 export async function addUser(state, name) {
+  return publicUserFor(await createAuthUser(state), name);
+}
+
+export async function addSignedInUser(state, name) {
+  if (!process.env.SUPABASE_ANON_KEY) throw new Error('SUPABASE_ANON_KEY is required');
   const authUser = await createAuthUser(state);
-  return saved(
-    await db
-      .from('users')
-      .insert({ id: authUser.id, name, email: authUser.email })
-      .select()
-      .single(),
-  );
+  const user = await publicUserFor(authUser, name);
+  const client = createClient(url, process.env.SUPABASE_ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  saved(await client.auth.signInWithPassword({ email: authUser.email, password: authUser.password }));
+  return { user, client };
 }
 
 export async function addEvent(state, row = {}) {
