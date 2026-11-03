@@ -52,6 +52,38 @@ acceptedTerms }`. `dateOfBirth` is `MM / DD / YYYY` (as typed in the form) or
 `YYYY-MM-DD`; passwords are 8-72 characters. Login body: `{ email, password }`.
 Invalid input returns 400 `{ error, fields }`, with one message per field.
 
+### Organization verification request
+
+Both endpoints need `Authorization: Bearer <access token>`; without a valid
+login they return 401. They call the `submit_verification_request` and
+`get_my_verification_request` database functions, so run
+`../supabase/migrations/20261103_organizer_verification_submit.sql` first.
+
+`POST /api/organizer/verification-request` submits an application. Body:
+
+| Field              | Required | Notes                                  |
+| ------------------ | -------- | -------------------------------------- |
+| `organizationName` | yes      | up to 255 characters                   |
+| `description`      | no       | up to 5000 characters                  |
+| `address`          | no       | up to 255 characters                   |
+| `website`          | no       | `http://` or `https://`, up to 2048    |
+| `contactEmail`     | no       | a valid email, up to 255 characters    |
+| `documentUrl`      | no       | `http://` or `https://`, up to 255     |
+
+It creates or updates the user's organizer profile (status `pending`) and adds
+a pending request, all in one transaction.
+
+- 201 `{ request }` on success.
+- 400 `{ error, fields }` with one message per invalid field.
+- 409 `{ error }` if the user already has a pending request or is already approved.
+- 500 if the database fails.
+
+`GET /api/organizer/verification-request` returns `{ request }` for the user's
+latest request, or `{ request: null }` if they never applied. A request is
+`{ id, organizationName, description, address, website, contactEmail,
+documentUrl, status, rejectionReason, submittedAt, reviewedAt }`, where
+`status` is `pending`, `approved` or `rejected`.
+
 Without Supabase configured, the event endpoints serve the placeholder data in
 `src/data/sample-events.ts` and the auth endpoints return 503.
 
