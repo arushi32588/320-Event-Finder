@@ -24,6 +24,9 @@ order, in the Supabase SQL editor. The migration adds the event fields the
 pages display (description, end time, price, ages, accessibility,
 transportation, image), `users.date_of_birth`, and a trigger that creates the
 `public.users` row whenever someone signs up.
+The admin migration adds the organizer application fields, review timestamps, and
+the admin-only functions behind the Admin Dashboard. To make someone an admin, set
+their `users.role` to `admin` in the Supabase table editor.
 
 ## Endpoints
 
@@ -34,6 +37,9 @@ transportation, image), `users.date_of_birth`, and a trigger that creates the
 | GET    | `/api/events/:id`   | `{ event }`; 400 for a non-numeric id; 404 if not found      |
 | POST   | `/api/auth/signup`  | 201 `{ user, session, needsEmailConfirmation }`; 409 if taken |
 | POST   | `/api/auth/login`   | `{ user, session }`; 401 for a wrong email or password      |
+| GET    | `/api/admin/verification-requests` | `{ requests }`; admins only                  |
+| POST   | `/api/admin/verification-requests/:id/approve` | `{ request }`; admins only       |
+| POST   | `/api/admin/verification-requests/:id/reject`  | `{ request }`; admins only       |
 
 `/api/events` query parameters (Home page):
 
@@ -51,6 +57,20 @@ Signup body: `{ name, email, dateOfBirth, password, confirmPassword,
 acceptedTerms }`. `dateOfBirth` is `MM / DD / YYYY` (as typed in the form) or
 `YYYY-MM-DD`; passwords are 8-72 characters. Login body: `{ email, password }`.
 Invalid input returns 400 `{ error, fields }`, with one message per field.
+
+The admin endpoints (Admin Dashboard) need `Authorization: Bearer <token>` from
+a user whose `users.role` is `admin`: 401 if not logged in, 403 otherwise.
+
+- The list takes `?status=pending` (the default), `approved`, `rejected` or
+  `all`, oldest first. Each request has `id`, `organizationName`, `description`,
+  `address`, `website`, `contactEmail`, `documentUrl`, `status`,
+  `rejectionReason`, `submittedAt`, `reviewedAt` and
+  `applicant: { id, name, email }`.
+- Approve marks the request and organizer profile approved and makes the user an
+  organizer. Reject marks both rejected and takes an optional `{ reason }` body.
+  Both return `{ request: { id, status, rejectionReason, reviewedAt } }`, with
+  404 for an unknown id and 409 if the request was already reviewed. Each review
+  runs as one database function, so it fully happens or doesn't happen at all.
 
 Without Supabase configured, the event endpoints serve the placeholder data in
 `src/data/sample-events.ts` and the auth endpoints return 503.
@@ -79,8 +99,10 @@ src/
   app/api/auth/signup/route.ts  Create account
   app/api/auth/login/route.ts   Log in
   data/sample-events.ts         Placeholder events (used until Supabase is configured)
+  app/api/admin/...             Admin Dashboard: list, approve, reject
   lib/events.ts                 Event type, filters, Supabase queries
   lib/auth.ts                   Signup/login validation and error handling
+  lib/admin.ts                  Admin check, verification request review
   lib/supabase.ts               Supabase clients (null until configured)
 tests/                          Vitest tests
 ```
