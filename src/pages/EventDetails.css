@@ -1,157 +1,141 @@
 .ed-page {
-  max-width: 1200px;
+  max-width: 1160px;
   margin: 0 auto;
-  padding: 24px 0 48px;
-  font-family: var(--font);
-  color: var(--text);
+  padding: 28px 0 16px;
 }
 
 .ed-back {
   display: inline-block;
-  margin-bottom: 20px;
-  color: var(--accent);
-  font-size: 15px;
-  font-weight: 500;
+  margin-bottom: 18px;
+  color: var(--ink);
+  font-weight: 700;
   text-decoration: none;
+  transition: transform 0.12s ease;
 }
 
 .ed-back:hover {
-  text-decoration: underline;
+  transform: translateX(-4px);
 }
 
 .ed-columns {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
-  gap: 40px;
+  grid-template-columns: minmax(0, 2fr) minmax(290px, 1fr);
+  gap: 36px;
   align-items: start;
 }
 
-/* Main column */
-
 .ed-image {
-  display: block;
-  width: 100%;
-  aspect-ratio: 2 / 1;
-  object-fit: cover;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #8e2a2a 0%, #c86a6a 55%, #f6e2df 100%);
+  height: 340px;
+  overflow: hidden;
+  background: var(--paper-deep);
+  border: var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.ed-image .poster-ticket {
+  top: 22px;
+  left: 22px;
+  transform: rotate(-3deg) scale(1.2);
+  transform-origin: top left;
 }
 
 .ed-page .ed-title {
-  margin: 28px 0 12px;
-  font-size: 32px;
-  line-height: 1.2;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  margin: 30px 0 12px;
+  font-size: clamp(36px, 5vw, 58px);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1;
 }
 
-.ed-when,
+.ed-when {
+  margin: 0 0 4px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
 .ed-where {
-  margin: 0 0 6px;
-  font-size: 16px;
+  margin: 0;
   color: var(--text-muted);
+  font-size: 16px;
 }
 
 .ed-description {
-  max-width: 70ch;
+  max-width: 66ch;
   margin: 24px 0 0;
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1.6;
 }
-
-/* Sidebar */
 
 .ed-side {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  position: sticky;
+  top: 86px;
 }
 
 .ed-card {
-  box-sizing: border-box;
-  padding: 24px;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  padding: 22px;
 }
 
 .ed-info p {
-  margin: 0 0 12px;
+  margin: 0 0 10px;
   font-size: 15px;
-  line-height: 1.5;
 }
 
 .ed-label {
   color: var(--text-muted);
+  font-weight: 600;
 }
 
 .ed-info .ed-verified {
-  color: var(--success);
-  font-weight: 600;
+  display: inline-block;
+  padding: 2px 10px;
+  background: var(--leaf-soft);
+  border: 1.5px solid var(--leaf);
+  border-radius: 999px;
+  color: var(--leaf);
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .ed-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  margin-top: 20px;
+  margin-top: 18px;
 }
 
 .ed-actions button {
-  height: 44px;
-  padding: 0 12px;
-  border: 1.5px solid var(--accent);
-  border-radius: 8px;
-  font-family: inherit;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s;
-}
-
-.ed-actions button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.ed-actions .ed-save {
-  background: #fff;
-  color: var(--accent);
-}
-
-.ed-actions .ed-save:hover,
-.ed-actions .ed-save[aria-pressed='true'] {
-  background: var(--accent-soft);
-}
-
-.ed-actions .ed-rsvp {
-  background: var(--accent);
-  color: #fff;
-}
-
-.ed-actions .ed-rsvp:hover,
-.ed-actions .ed-rsvp[aria-pressed='true'] {
-  background: var(--accent-hover);
-  border-color: var(--accent-hover);
+  min-height: 48px;
+  padding: 0 10px;
 }
 
 .ed-map {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 200px;
-  background: var(--surface-warm);
-  color: var(--text-muted);
-  font-size: 14px;
+  display: grid;
+  place-items: center;
+  height: 170px;
+  background-color: var(--paper-deep);
+  background-image:
+    linear-gradient(rgba(27, 22, 18, 0.1) 2px, transparent 2px),
+    linear-gradient(90deg, rgba(27, 22, 18, 0.1) 2px, transparent 2px);
+  background-size: 34px 34px;
+  font-family: var(--font-display);
+  font-weight: 700;
 }
 
-@media (max-width: 800px) {
+@media (max-width: 860px) {
   .ed-columns {
     grid-template-columns: 1fr;
-    gap: 28px;
+    gap: 26px;
   }
 
-  .ed-page .ed-title {
-    font-size: 26px;
+  .ed-side {
+    position: static;
+  }
+
+  .ed-image {
+    height: 240px;
   }
 }

@@ -1,13 +1,234 @@
-/* Shared color and type tokens. Defining these does not restyle any page. */
+/* Event Finder's look: gig posters on a community bulletin board. Warm paper,
+   bold ink outlines, hard shadows, and a few loud colors. */
+@import '@fontsource-variable/bricolage-grotesque';
+@import '@fontsource-variable/instrument-sans';
+
 :root {
-  --accent: #881c1c;
-  --accent-hover: #6e1616;
-  --accent-soft: #f6e9e9;
-  --text: #1f1a17;
-  --text-muted: #6b625c;
-  --border: #e7e2de;
-  --border-strong: #cfc7c1;
-  --surface-warm: #faf8f6;
-  --success: #2e7d4f;
-  --font: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --paper: #fff6e5;
+  --paper-deep: #fdeac4;
+  --surface: #fffdf8;
+  --ink: #1b1612;
+  --text: var(--ink);
+  --text-muted: #5f544a;
+  --accent: #d1381c;
+  --accent-hover: #b02c14;
+  --accent-soft: #ffe3d8;
+  --marigold: #ffc22e;
+  --cobalt: #2743d6;
+  --pink: #ff9ecb;
+  --leaf: #0b7a53;
+  --leaf-soft: #d5f3e4;
+  --danger: #b3261e;
+  --border: var(--ink);
+  --border-strong: var(--ink);
+  --line: 2px solid var(--ink);
+  --shadow: 4px 4px 0 var(--ink);
+  --shadow-lift: 7px 7px 0 var(--ink);
+  --radius: 14px;
+  --font: 'Instrument Sans Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Bricolage Grotesque Variable', 'Instrument Sans Variable', system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--paper);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+:focus-visible {
+  outline: 3px solid var(--cobalt);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--marigold);
+}
+
+/* Cards */
+.login-card,
+.ca-card,
+.ov-card,
+.ed-card,
+.ad-row,
+.ad-sidebar,
+.home-card,
+.pf-card {
+  background: var(--surface);
+  border: var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+/* Buttons */
+.home-save,
+.pf-btn,
+.ed-save,
+.ed-rsvp,
+.ad-review,
+.ad-approve,
+.ad-reject,
+.login-submit,
+.login-google,
+.ca-submit,
+.ov-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 20px;
+  border: var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 2px 2px 0 var(--ink);
+  color: var(--ink);
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
+}
+
+.home-save:hover,
+.pf-btn:hover,
+.ed-save:hover,
+.ed-rsvp:hover,
+.ad-review:hover,
+.ad-approve:hover,
+.ad-reject:hover,
+.login-submit:hover,
+.ca-submit:hover,
+.ov-submit:hover {
+  box-shadow: 4px 4px 0 var(--ink);
+  transform: translate(-2px, -2px);
+}
+
+.home-save:active,
+.pf-btn:active,
+.ed-save:active,
+.ed-rsvp:active,
+.ad-review:active,
+.ad-approve:active,
+.ad-reject:active,
+.login-submit:active,
+.ca-submit:active,
+.ov-submit:active {
+  box-shadow: 0 0 0 var(--ink);
+  transform: translate(2px, 2px);
+}
+
+.pf-btn-primary,
+.ed-rsvp,
+.ad-approve,
+.login-submit,
+.ca-submit,
+.ov-submit {
+  background: var(--accent);
+  color: #fff;
+}
+
+button:disabled {
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+}
+
+/* Saved / Going: the button stays lit once it's on. */
+.home-save[aria-pressed='true'],
+.ed-save[aria-pressed='true'],
+.ed-rsvp[aria-pressed='true'] {
+  background: var(--marigold);
+  color: var(--ink);
+}
+
+/* Form fields */
+.login-field label,
+.ca-field label,
+.ov-field label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.login-field input,
+.ca-field input,
+.ov-field input,
+.ov-field textarea,
+.ad-reason textarea,
+.pf-actions input {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 14px;
+  background: #fff;
+  border: var(--line);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 16px;
+  transition: box-shadow 0.12s ease;
+}
+
+.login-field input::placeholder,
+.ca-field input::placeholder,
+.ov-field input::placeholder,
+.ov-field textarea::placeholder {
+  color: #8a7e72;
+}
+
+.login-field input:focus,
+.ca-field input:focus,
+.ov-field input:focus,
+.ov-field textarea:focus,
+.ad-reason textarea:focus,
+.pf-actions input:focus {
+  box-shadow: 3px 3px 0 var(--marigold);
+  outline: none;
+}
+
+[aria-invalid='true'] {
+  border-color: var(--danger) !important;
+  box-shadow: 3px 3px 0 var(--accent-soft);
+}
+
+/* Sticker: a small tilted label slapped onto a page. */
+.sticker {
+  display: inline-block;
+  padding: 4px 12px;
+  background: var(--marigold);
+  border: var(--line);
+  border-radius: 999px;
+  box-shadow: 2px 2px 0 var(--ink);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  transform: rotate(-4deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }

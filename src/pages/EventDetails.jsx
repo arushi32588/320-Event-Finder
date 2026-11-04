@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router';
+import EventPoster from '../components/EventPoster.jsx';
 import { api } from '../lib/api.js';
 import { useAuth } from '../lib/auth.jsx';
 import '../theme.css';
@@ -112,9 +113,9 @@ function EventDetailsContent({ event }) {
 
       <div className="ed-columns">
         <div className="ed-main">
-          {event.imageUrl
-            ? <img className="ed-image" src={event.imageUrl} alt="" />
-            : <div className="ed-image" aria-hidden="true" />}
+          <div className="ed-image">
+            <EventPoster event={event} />
+          </div>
           <h1 className="ed-title">{event.title}</h1>
           <p className="ed-when">{formatWhen(event.startsAt, event.endsAt)}</p>
           <p className="ed-where">{where}</p>
@@ -151,7 +152,7 @@ function EventDetailsContent({ event }) {
             </div>
             {error && <p className="app-error" role="alert">{error}</p>}
           </div>
-          <div className="ed-card ed-map">Map / location</div>
+          <div className="ed-card ed-map">Map coming soon</div>
         </aside>
       </div>
     </div>

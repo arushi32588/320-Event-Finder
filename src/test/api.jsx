@@ -47,7 +47,7 @@ export function resetApi() {
 
 export const profile = (overrides = {}) => ({
   id: 'user-1',
-  email: 'maya@umass.edu',
+  email: 'maya@example.org',
   name: 'Maya Fox',
   dateOfBirth: '2004-05-01',
   role: 'attendee',

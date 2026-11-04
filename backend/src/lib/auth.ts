@@ -110,6 +110,9 @@ export function authErrorResponse(error: AuthError): Response {
     case 'user_already_exists':
     case 'email_exists':
       return Response.json({ error: 'An account with this email already exists.' }, { status: 409 });
+    case 'email_address_invalid':
+    case 'validation_failed':
+      return Response.json({ error: 'Please fix the highlighted fields.', fields: { email: 'Enter a valid email address.' } }, { status: 400 });
     case 'weak_password':
       return Response.json({ error: 'Password is too weak. Try a longer one.', fields: { password: error.message } }, { status: 400 });
     case 'invalid_credentials':

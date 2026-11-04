@@ -1,114 +1,180 @@
 .nav-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
   gap: 20px;
-  padding: 14px 24px;
-  border-bottom: 1px solid var(--border);
-  background: #fff;
+  padding: 12px 28px;
+  background: var(--paper);
+  border-bottom: var(--line);
 }
 
 .nav-logo {
-  color: var(--accent);
-  font-size: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 22px;
   font-weight: 800;
-  letter-spacing: 0.02em;
+  letter-spacing: -0.03em;
   text-decoration: none;
   white-space: nowrap;
 }
 
-.nav-search {
+.nav-logo-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  background: var(--marigold);
+  border: var(--line);
+  border-radius: 9px;
+  font-size: 18px;
+  line-height: 1;
+  transition: transform 0.25s ease;
+}
+
+.nav-logo:hover .nav-logo-mark {
+  transform: rotate(90deg);
+}
+
+.nav-bar form[role='search'] {
+  display: flex;
   flex: 1;
-  max-width: 420px;
-  height: 40px;
-  padding: 0 14px;
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
+  max-width: 400px;
+}
+
+.nav-search {
+  width: 100%;
+  height: 42px;
+  padding: 0 16px;
+  background: #fff;
+  border: var(--line);
+  border-radius: 999px;
+  color: var(--text);
   font-family: inherit;
   font-size: 15px;
-  color: var(--text);
+}
+
+.nav-search:focus {
+  box-shadow: 3px 3px 0 var(--marigold);
+  outline: none;
 }
 
 .nav-location {
-  padding: 9px 14px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface-warm);
-  font-size: 15px;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
   white-space: nowrap;
 }
 
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 6px;
   margin-left: auto;
 }
 
-.nav-links a {
-  color: var(--text);
+.nav-links a:not(.nav-login) {
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--ink);
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 600;
   text-decoration: none;
+  white-space: nowrap;
 }
 
-.nav-links a:hover,
-.nav-links a.active {
-  color: var(--accent);
+.nav-links a:not(.nav-login):hover {
+  background: var(--paper-deep);
+}
+
+.nav-links a.active:not(.nav-login) {
+  background: var(--ink);
+  color: var(--paper);
 }
 
 .nav-links .nav-login {
-  padding: 9px 18px;
-  border: 1.5px solid var(--accent);
-  border-radius: 8px;
-  color: var(--accent);
-  font-weight: 600;
-}
-
-.nav-links .nav-login:hover {
-  background: var(--accent-soft);
-}
-
-@media (max-width: 800px) {
-  .nav-bar {
-    flex-wrap: wrap;
-  }
-
-  .nav-search {
-    order: 1;
-    flex-basis: 100%;
-    max-width: none;
-  }
-}
-
-html body {
-  margin: 0;
-  font-family: var(--font);
-  color: var(--text);
-}
-
-.app-main {
-  padding: 0 24px;
-}
-
-.nav-logout {
+  margin-left: 8px;
+  padding: 8px 18px;
+  background: var(--accent);
+  border: var(--line);
+  border-radius: 10px;
+  box-shadow: 2px 2px 0 var(--ink);
+  color: #fff;
   cursor: pointer;
-  font: inherit;
-}
-
-.nav-bar form[role="search"] {
-  display: flex;
-  flex: 1;
-  max-width: 420px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 .nav-links .nav-logout {
-  background: none;
+  background: var(--surface);
+  color: var(--ink);
 }
 
-@media (max-width: 800px) {
-  .nav-bar form[role="search"] {
-    order: 1;
+.app-main {
+  min-height: calc(100vh - 150px);
+  padding: 0 28px;
+}
+
+.app-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 56px;
+  padding: 22px 28px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 14px;
+}
+
+.app-footer strong {
+  font-family: var(--font-display);
+  font-size: 16px;
+}
+
+@media (max-width: 860px) {
+  .nav-bar {
+    position: static;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px 16px;
+  }
+
+  .nav-bar form[role='search'] {
     flex-basis: 100%;
     max-width: none;
+    order: 1;
+  }
+
+  .nav-location {
+    display: none;
+  }
+
+  .nav-links {
+    flex-wrap: wrap;
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .nav-links a:not(.nav-login) {
+    padding: 6px 8px;
+    font-size: 14px;
+  }
+
+  .nav-links .nav-login {
+    margin-left: 2px;
+    padding: 6px 12px;
+    font-size: 14px;
+  }
+
+  .app-main {
+    padding: 0 16px;
   }
 }

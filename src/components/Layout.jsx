@@ -33,7 +33,8 @@ export default function Layout() {
     <>
       <header className="nav-bar">
         <Link to="/" className="nav-logo">
-          EVENT FINDER
+          <span className="nav-logo-mark" aria-hidden="true">✶</span>
+          Event Finder
         </Link>
 
         <form role="search" onSubmit={handleSearch}>
@@ -47,7 +48,7 @@ export default function Layout() {
           />
         </form>
 
-        <span className="nav-location">📍 Amherst</span>
+        <span className="nav-location">Amherst, MA</span>
 
         <nav className="nav-links" aria-label="Main navigation">
           <NavLink to="/saved">Saved</NavLink>
@@ -69,6 +70,11 @@ export default function Layout() {
       <main className="app-main">
         <Outlet />
       </main>
+
+      <footer className="app-footer">
+        <strong>Event Finder ✶</strong>
+        <span>Made by Team BlueBird</span>
+      </footer>
     </>
   );
 }

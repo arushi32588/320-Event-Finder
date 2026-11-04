@@ -1,69 +1,46 @@
 .login-card {
-  box-sizing: border-box;
-  max-width: 480px;
-  margin: 48px auto;
-  padding: 40px;
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  font-family: var(--font);
-  color: var(--text);
+  position: relative;
+  max-width: 460px;
+  margin: 64px auto 16px;
+  padding: 44px 38px 36px;
+}
+
+.login-card::before {
+  content: 'Hi again!';
+  position: absolute;
+  top: -18px;
+  right: 22px;
+  padding: 5px 14px;
+  background: var(--pink);
+  border: var(--line);
+  border-radius: 999px;
+  box-shadow: 2px 2px 0 var(--ink);
+  font-family: var(--font-display);
+  font-weight: 800;
+  transform: rotate(5deg);
 }
 
 .login-card .login-title {
-  margin: 0 0 8px;
-  font-size: 26px;
-  line-height: 1.2;
-  font-weight: 700;
-  text-align: center;
+  margin: 0 0 4px;
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .login-card .login-subtitle {
-  margin: 0 0 28px;
-  font-size: 15px;
+  margin: 0 0 26px;
   color: var(--text-muted);
-  text-align: center;
 }
 
 .login-field + .login-field {
-  margin-top: 18px;
-}
-
-.login-field label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.login-field input {
-  box-sizing: border-box;
-  width: 100%;
-  height: 44px;
-  padding: 0 12px;
-  background: #fff;
-  border: 1px solid var(--border-strong);
-  border-radius: 8px;
-  color: var(--text);
-  font-family: inherit;
-  font-size: 15px;
-}
-
-.login-field input::placeholder {
-  color: #9c938d;
-}
-
-.login-field input:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(136, 28, 28, 0.15);
+  margin-top: 16px;
 }
 
 .login-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 18px;
+  margin-top: 16px;
   font-size: 14px;
 }
 
@@ -71,102 +48,65 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  font-weight: 600;
 }
 
 .login-remember input {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   margin: 0;
   accent-color: var(--accent);
 }
 
 .login-link {
   color: var(--accent);
-  font-weight: 600;
-  text-decoration: none;
+  font-weight: 700;
 }
 
-.login-link:hover {
-  text-decoration: underline;
+.login-link[aria-disabled='true'] {
+  color: var(--text-muted);
+  cursor: not-allowed;
+  font-weight: 500;
+  text-decoration: none;
 }
 
 .login-submit,
 .login-google {
   width: 100%;
-  height: 48px;
-  border-radius: 8px;
-  font-family: inherit;
+  min-height: 50px;
   font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.15s;
 }
 
 .login-submit {
-  margin-top: 24px;
-  border: none;
-  background: var(--accent);
-  color: #fff;
-}
-
-.login-submit:hover {
-  background: var(--accent-hover);
-}
-
-.login-google {
-  border: 1px solid var(--border-strong);
-  background: #fff;
-  color: var(--text);
-}
-
-.login-google:hover {
-  background: var(--surface-warm);
-}
-
-.login-submit:focus-visible,
-.login-google:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  margin-top: 22px;
 }
 
 .login-divider {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 20px 0;
-  font-size: 14px;
+  margin: 18px 0;
   color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .login-divider::before,
 .login-divider::after {
-  content: "";
+  content: '';
   flex: 1;
-  height: 1px;
-  background: var(--border);
+  border-top: 2px dashed var(--ink);
 }
 
 .login-card .login-signup {
   margin: 20px 0 0;
-  font-size: 14px;
-  color: var(--text-muted);
+  font-size: 15px;
   text-align: center;
 }
 
 @media (max-width: 480px) {
   .login-card {
-    padding: 24px;
+    margin-top: 40px;
+    padding: 36px 22px 26px;
   }
-}
-
-/* Controls that need more setup before they can work. */
-.login-google:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
-.login-link[aria-disabled="true"] {
-  color: var(--text-muted);
-  cursor: not-allowed;
-  font-weight: 400;
 }
