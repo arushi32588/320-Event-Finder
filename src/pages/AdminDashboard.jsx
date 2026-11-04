@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { organizerRequests, pendingEvents } from '../data/admin.js';
+import { useEffect, useState } from 'react';
+import { api } from '../lib/api.js';
+import { useAuth } from '../lib/auth.jsx';
 import '../theme.css';
 import './AdminDashboard.css';
 
@@ -29,6 +30,7 @@ function formatWhen(startsAt, endsAt) {
 function organizerRow(request) {
   return {
     key: `org-${request.id}`,
+    canGiveReason: true,
     name: request.organizationName,
     meta: [request.applicant.name, request.applicant.email].filter(Boolean).join(' • '),
     details: [
@@ -65,25 +67,78 @@ function eventRow(event) {
 }
 
 export default function AdminDashboard() {
+  const { user } = useAuth();
+  if (user?.role !== 'admin') {
+    return (
+      <div className="ad-page">
+        <h1 className="ad-title">Admin Dashboard</h1>
+        <p className="app-error" role="alert">Only admins can view this page.</p>
+      </div>
+    );
+  }
+  return <AdminContent />;
+}
+
+function AdminContent() {
   const [view, setView] = useState('overview');
-  const [requests, setRequests] = useState(organizerRequests);
-  const [events, setEvents] = useState(pendingEvents);
+  const [requests, setRequests] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [expanded, setExpanded] = useState([]);
   const [requestStatus, setRequestStatus] = useState('');
   const [eventStatus, setEventStatus] = useState('');
+
+  useEffect(() => {
+    let current = true;
+    Promise.all([api('/api/admin/verification-requests'), api('/api/admin/events')])
+      .then(([requestData, eventData]) => {
+        if (!current) return;
+        setRequests(requestData.requests);
+        setEvents(eventData.events);
+      })
+      .catch((err) => {
+        if (current) setLoadError(err.message);
+      })
+      .finally(() => {
+        if (current) setLoading(false);
+      });
+    return () => {
+      current = false;
+    };
+  }, []);
 
   function toggleExpanded(key) {
     setExpanded(expanded.includes(key) ? expanded.filter((k) => k !== key) : [...expanded, key]);
   }
 
-  function decideRequest(request, decision) {
-    setRequests(requests.filter((r) => r.id !== request.id));
-    setRequestStatus(`${decision} ${request.organizationName}.`);
+  // A row only leaves the list once the server has saved the decision. If it was
+  // already reviewed by another admin it leaves too, since there's nothing to do.
+  async function decideRequest(request, decision, reason) {
+    const action = decision === 'Approved' ? 'approve' : 'reject';
+    try {
+      await api(`/api/admin/verification-requests/${request.id}/${action}`, {
+        method: 'POST',
+        body: action === 'reject' && reason ? { reason } : undefined,
+      });
+      setRequests((list) => list.filter((r) => r.id !== request.id));
+      setRequestStatus(`${decision} ${request.organizationName}.`);
+    } catch (err) {
+      if (err.status === 409) setRequests((list) => list.filter((r) => r.id !== request.id));
+      setRequestStatus(`Could not update ${request.organizationName}: ${err.message}`);
+    }
   }
 
-  function decideEvent(event, decision) {
-    setEvents(events.filter((e) => e.id !== event.id));
-    setEventStatus(`${decision} ${event.title}.`);
+  async function decideEvent(event, decision) {
+    const action = decision === 'Approved' ? 'approve' : 'reject';
+    try {
+      await api(`/api/admin/events/${event.id}/${action}`, { method: 'POST' });
+      setEvents((list) => list.filter((e) => e.id !== event.id));
+      setEventStatus(`${decision} ${event.title}.`);
+    } catch (err) {
+      if (err.status === 409) setEvents((list) => list.filter((e) => e.id !== event.id));
+      setEventStatus(`Could not update ${event.title}: ${err.message}`);
+    }
   }
 
   const current = views.find((v) => v.id === view);
@@ -109,7 +164,10 @@ export default function AdminDashboard() {
         </nav>
 
         <div className="ad-content">
-          {(view === 'overview' || view === 'organizers') && (
+          {loadError && <p className="app-error" role="alert">{loadError}</p>}
+          {loading && <p className="app-message" role="status">Loading…</p>}
+
+          {!loading && !loadError && (view === 'overview' || view === 'organizers') && (
             <ReviewSection
               title="Pending Organizer Requests"
               emptyText="No pending organizer requests."
@@ -122,7 +180,7 @@ export default function AdminDashboard() {
             />
           )}
 
-          {(view === 'overview' || view === 'events') && (
+          {!loading && !loadError && (view === 'overview' || view === 'events') && (
             <ReviewSection
               title="Pending Event Approvals"
               emptyText="No pending events."
@@ -166,7 +224,7 @@ function ReviewSection({ title, emptyText, status, items, toRow, expanded, onTog
                 open={expanded.includes(row.key)}
                 onToggle={() => onToggle(row.key)}
                 onApprove={() => onDecide(item, 'Approved')}
-                onReject={() => onDecide(item, 'Rejected')}
+                onReject={(reason) => onDecide(item, 'Rejected', reason)}
               />
             );
           })}
@@ -177,8 +235,16 @@ function ReviewSection({ title, emptyText, status, items, toRow, expanded, onTog
 }
 
 function ReviewRow({ row, open, onToggle, onApprove, onReject }) {
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
   const panelId = `ad-details-${row.key}`;
   const details = row.details.filter(([, value]) => value);
+
+  async function decide(action) {
+    setBusy(true);
+    await action();
+    setBusy(false);
+  }
 
   return (
     <article className="ad-row">
@@ -197,7 +263,7 @@ function ReviewRow({ row, open, onToggle, onApprove, onReject }) {
           >
             {open ? 'Hide details' : 'Review'}
           </button>
-          <button type="button" className="ad-approve" onClick={onApprove}>
+          <button type="button" className="ad-approve" disabled={busy} onClick={() => decide(onApprove)}>
             Approve
           </button>
         </div>
@@ -213,7 +279,13 @@ function ReviewRow({ row, open, onToggle, onApprove, onReject }) {
               </div>
             ))}
           </dl>
-          <button type="button" className="ad-reject" onClick={onReject}>
+          {row.canGiveReason && (
+            <label className="ad-reason">
+              Reason for rejecting (optional)
+              <textarea rows={2} maxLength={1000} value={reason} onChange={(e) => setReason(e.target.value)} />
+            </label>
+          )}
+          <button type="button" className="ad-reject" disabled={busy} onClick={() => decide(() => onReject(reason.trim()))}>
             Reject
           </button>
         </div>

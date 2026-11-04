@@ -1,4 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { EVENT_ID_PATTERN } from '@/lib/event-columns';
+import { SUBMITTED_COLUMNS, toSubmittedEvent, type SubmittedEvent, type SubmittedEventRow } from '@/lib/event-submissions';
 import { getAccount, requireUser, serverError, type SignedInRequest } from '@/lib/session';
 
 export type VerificationStatus = 'pending' | 'approved' | 'rejected';
@@ -168,6 +170,59 @@ export async function handleReview(request: Request, id: string, decision: Revie
     const result = await reviewVerificationRequest(session.supabase, id, decision, reason);
     if ('status' in result) return Response.json({ error: result.error }, { status: result.status });
     return Response.json({ request: result.request });
+  } catch (error) {
+    console.error(error);
+    return serverError('Could not save this review. Please try again.');
+  }
+}
+
+// ---------- Event approvals ----------
+
+export async function listEventsForReview(supabase: SupabaseClient, status: VerificationStatus | null): Promise<SubmittedEvent[]> {
+  let query = supabase.from('events').select(SUBMITTED_COLUMNS).order('start_time', { ascending: true });
+  if (status) query = query.eq('approval_status', status);
+  const { data, error } = await query;
+  if (error) throw new Error(`Failed to load events for review: ${error.message}`);
+  return (data as unknown as SubmittedEventRow[]).map(toSubmittedEvent);
+}
+
+// Only a pending event can be reviewed, so two admins can't overwrite each other.
+export async function reviewEvent(
+  supabase: SupabaseClient,
+  adminId: string,
+  id: string,
+  decision: ReviewDecision,
+): Promise<{ event: SubmittedEvent } | { status: number; error: string }> {
+  const { data, error } = await supabase
+    .from('events')
+    .update({ approval_status: decision, reviewed_by_user_id: adminId })
+    .eq('id', id)
+    .eq('approval_status', 'pending')
+    .select(SUBMITTED_COLUMNS)
+    .maybeSingle();
+  if (error) throw new Error(`Failed to review event ${id}: ${error.message}`);
+  if (data) return { event: toSubmittedEvent(data as unknown as SubmittedEventRow) };
+
+  const existing = await supabase.from('events').select('id').eq('id', id).maybeSingle();
+  if (existing.error) throw new Error(`Failed to look up event ${id}: ${existing.error.message}`);
+  return existing.data
+    ? { status: 409, error: 'This event has already been reviewed' }
+    : { status: 404, error: 'Event not found' };
+}
+
+// The shared body of the event approve and reject routes.
+export async function handleEventReview(request: Request, id: string, decision: ReviewDecision): Promise<Response> {
+  const session = await requireAdmin(request);
+  if (session instanceof Response) return session;
+
+  if (!EVENT_ID_PATTERN.test(id)) {
+    return Response.json({ error: 'Event id must be a positive whole number.' }, { status: 400 });
+  }
+
+  try {
+    const result = await reviewEvent(session.supabase, session.user.id, id, decision);
+    if ('status' in result) return Response.json({ error: result.error }, { status: result.status });
+    return Response.json({ event: result.event });
   } catch (error) {
     console.error(error);
     return serverError('Could not save this review. Please try again.');

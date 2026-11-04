@@ -180,3 +180,8 @@
     font-size: 28px;
   }
 }
+
+.home-chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

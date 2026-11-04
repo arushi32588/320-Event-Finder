@@ -264,3 +264,19 @@
     font-size: 26px;
   }
 }
+
+.ad-reason {
+  display: block;
+  font-size: 0.9rem;
+  margin: 0.75rem 0;
+}
+
+.ad-reason textarea {
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  display: block;
+  font: inherit;
+  margin-top: 0.25rem;
+  padding: 0.5rem;
+  width: 100%;
+}

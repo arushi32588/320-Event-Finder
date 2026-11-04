@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router";
+import { api } from "../lib/api.js";
+import { useAuth } from "../lib/auth.jsx";
 import "../theme.css";
 import "./OrganizerVerification.css";
 
@@ -64,19 +66,43 @@ function validate(values) {
 }
 
 export default function OrganizerVerification() {
+  const { refreshUser } = useAuth();
   const [errors, setErrors] = useState({});
-  const [fileName, setFileName] = useState("");
+  const [message, setMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  // The request is not sent to the backend yet
-  // This only validates and shows the confirmation
-
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     const values = Object.fromEntries(new FormData(e.currentTarget));
     const found = validate(values);
     setErrors(found);
-    if (Object.keys(found).length === 0) setSubmitted(true);
+    setMessage("");
+    if (Object.keys(found).length > 0) return;
+
+    setSubmitting(true);
+    try {
+      await api("/api/organizer/verification-request", {
+        method: "POST",
+        body: {
+          organizationName: values.organizationName,
+          description: values.description,
+          address: values.address,
+          website: values.website,
+          contactEmail: values.contactEmail,
+          documentUrl: values.proofLink,
+        },
+      });
+      setSubmitted(true);
+      // Updates the status shown on the profile; a failure here is harmless.
+      refreshUser().catch(() => {});
+    } catch (err) {
+      const { documentUrl, ...fields } = err.fields ?? {};
+      setErrors({ ...fields, proofLink: documentUrl });
+      setMessage(err.message);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   if (submitted) {
@@ -103,6 +129,8 @@ export default function OrganizerVerification() {
         Submit information about your organization. An admin will review your
         request before you can publish events.
       </p>
+
+      {message && <p className="app-error" role="alert">{message}</p>}
 
       <form className="ov-card" onSubmit={handleSubmit} noValidate>
         {fields.map((field) => {
@@ -147,21 +175,16 @@ export default function OrganizerVerification() {
             name="proofLink"
             type="url"
             placeholder="Paste a link (Google Drive, website…)"
+            aria-invalid={errors.proofLink ? "true" : undefined}
           />
+          {errors.proofLink && <p className="ov-error">{errors.proofLink}</p>}
           <div className="ov-bottom-row">
-            <input
-              id="org-proof"
-              name="proof"
-              type="file"
-              className="ov-file-input"
-              accept=".pdf,.png,.jpg,.jpeg"
-              onChange={(e) => setFileName(e.target.files?.[0]?.name ?? "")}
-            />
-            <label htmlFor="org-proof" className="ov-upload">
-              {fileName || "or upload a file"}
-            </label>
-            <button type="submit" className="ov-submit">
-              Submit Request
+            {/* File uploads need Supabase Storage set up; links work for now. */}
+            <span className="ov-upload" aria-disabled="true" title="Coming soon">
+              File upload coming soon
+            </span>
+            <button type="submit" className="ov-submit" disabled={submitting}>
+              {submitting ? "Submitting…" : "Submit Request"}
             </button>
           </div>
         </div>

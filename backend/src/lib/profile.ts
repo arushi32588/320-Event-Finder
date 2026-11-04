@@ -31,3 +31,17 @@ export async function getProfile(supabase: SupabaseClient, user: User): Promise<
     organizationName: organizer?.organization_name ?? null,
   };
 }
+
+export const MAX_NAME_LENGTH = 255;
+
+export function validateName(value: unknown): { name: string } | { error: string } {
+  const name = typeof value === 'string' ? value.trim() : '';
+  if (!name) return { error: 'Name is required.' };
+  if (name.length > MAX_NAME_LENGTH) return { error: `Name must be ${MAX_NAME_LENGTH} characters or fewer.` };
+  return { name };
+}
+
+export async function updateName(supabase: SupabaseClient, userId: string, name: string): Promise<void> {
+  const { error } = await supabase.from('users').update({ name }).eq('id', userId);
+  if (error) throw new Error(`Failed to update name for ${userId}: ${error.message}`);
+}

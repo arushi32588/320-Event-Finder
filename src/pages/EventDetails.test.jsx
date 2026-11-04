@@ -1,122 +1,167 @@
-import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, describe, it, expect } from 'vitest';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Link, MemoryRouter, Route, Routes } from 'react-router';
+import { Link, Route, Routes } from 'react-router';
 import EventDetails from './EventDetails.jsx';
+import { fail, loggedInRoutes, mockApi, renderPage, resetApi } from '../test/api.jsx';
+
+const movieNight = {
+  id: '1',
+  title: 'Community Outdoor Movie Night',
+  description: 'Bring a blanket or lawn chair.',
+  location: 'Amherst Town Common',
+  startsAt: '2026-10-16T23:00:00Z',
+  endsAt: '2026-10-17T01:30:00Z',
+  organizer: 'Amherst Community Group',
+  price: 'Free',
+  ages: 'All ages',
+  verified: true,
+  accessibility: 'Wheelchair accessible',
+  transportation: 'Bus / Walk / Parking',
+  imageUrl: null,
+};
+const bareEvent = { id: '3', title: 'Hack Night', startsAt: '2026-10-17T22:00:00Z', organizer: 'Hack Club', verified: false };
+
+const eventRoutes = {
+  'GET /api/events/1': { event: movieNight },
+  'GET /api/events/3': { event: bareEvent },
+  'GET /api/events/999': fail(404, 'Event not found'),
+};
 
 function renderAt(path, extra = null) {
-  return render(
-    <MemoryRouter initialEntries={[path]}>
+  return renderPage(
+    <>
       <Routes>
         <Route path="/events/:id" element={<EventDetails />} />
+        <Route path="/login" element={<h1>Login page</h1>} />
       </Routes>
       {extra}
-    </MemoryRouter>,
+    </>,
+    { route: path },
   );
 }
 
-describe('EventDetails', () => {
-  // Main column content renders for a known event.
-  it('shows the title, date, place and description for an event', () => {
-    renderAt('/events/1');
+const loggedIn = (overrides = {}) => ({
+  ...eventRoutes,
+  ...loggedInRoutes(),
+  'GET /api/events/1/save': { saved: false },
+  'GET /api/events/1/rsvp': { going: false },
+  'GET /api/events/3/save': { saved: false },
+  'GET /api/events/3/rsvp': { going: false },
+  'PUT /api/events/1/save': { saved: true },
+  'DELETE /api/events/1/save': { saved: false },
+  'PUT /api/events/1/rsvp': { going: true },
+  'DELETE /api/events/1/rsvp': { going: false },
+  ...overrides,
+});
 
-    expect(
-      screen.getByRole('heading', { level: 1, name: 'Community Outdoor Movie Night' }),
-    ).toBeInTheDocument();
+afterEach(resetApi);
+
+describe('EventDetails', () => {
+  it('loads the event from the backend and shows its details', async () => {
+    mockApi(eventRoutes);
+    renderAt('/events/1');
+    expect(screen.getByRole('status')).toHaveTextContent(/loading event/i);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Community Outdoor Movie Night' })).toBeInTheDocument();
     expect(screen.getByText('Friday, Oct 16 • 7:00 PM – 9:30 PM')).toBeInTheDocument();
     expect(screen.getByText('Amherst Town Common • Free • All ages')).toBeInTheDocument();
     expect(screen.getByText(/Bring a blanket or lawn chair/)).toBeInTheDocument();
   });
 
-  // Sidebar card shows organizer, verified badge, accessibility and transportation.
-  it('shows the organizer info card when every optional field is present', () => {
+  it('shows the organizer info card when every optional field is present', async () => {
+    mockApi(eventRoutes);
     renderAt('/events/1');
-
-    expect(screen.getByText('Amherst Community Group')).toHaveTextContent(
-      'Organizer: Amherst Community Group',
-    );
+    expect(await screen.findByText('Amherst Community Group')).toBeInTheDocument();
     expect(screen.getByText('✓ Verified organizer')).toBeInTheDocument();
-    expect(screen.getByText('Wheelchair accessible')).toHaveTextContent(
-      'Accessibility: Wheelchair accessible',
-    );
-    expect(screen.getByText('Bus / Walk / Parking')).toHaveTextContent(
-      'Transportation: Bus / Walk / Parking',
-    );
+    expect(screen.getByText('Wheelchair accessible')).toBeInTheDocument();
+    expect(screen.getByText('Bus / Walk / Parking')).toBeInTheDocument();
   });
 
-  // Missing optional fields are left out
-  it('hides optional fields the event does not have', () => {
+  it('hides optional fields the event does not have', async () => {
+    mockApi(eventRoutes);
     renderAt('/events/3');
-
-    expect(screen.getByRole('heading', { level: 1, name: 'Hack Night' })).toBeInTheDocument();
+    await screen.findByRole('heading', { level: 1, name: 'Hack Night' });
     expect(screen.queryByText('✓ Verified organizer')).not.toBeInTheDocument();
     expect(screen.queryByText('Accessibility:')).not.toBeInTheDocument();
-    expect(screen.getByText('Walk / Bus')).toBeInTheDocument();
+    expect(screen.queryByText('Transportation:')).not.toBeInTheDocument();
   });
 
-  // Save button flips its label and pressed state on each click.
-  it('toggles Save Event to Saved and back', async () => {
+  it('has a back link to the events list', async () => {
+    mockApi(eventRoutes);
+    renderAt('/events/1');
+    expect(await screen.findByRole('link', { name: '← Back to events' })).toHaveAttribute('href', '/');
+  });
+
+  it('shows "Event not found" when the backend has no such event', async () => {
+    mockApi(eventRoutes);
+    renderAt('/events/999');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Event not found' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '← Back to events' })).toBeInTheDocument();
+  });
+
+  it('shows the error instead of "not found" when the server fails', async () => {
+    mockApi({ 'GET /api/events/1': fail(500, 'Could not load this event. Please try again.') });
+    renderAt('/events/1');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load this event');
+    expect(screen.queryByText('Event not found')).not.toBeInTheDocument();
+  });
+});
+
+describe('EventDetails: Save and RSVP', () => {
+  it.each(['Save Event', 'RSVP'])('sends logged-out visitors to log in when clicking %s', async (name) => {
+    mockApi(eventRoutes);
     const user = userEvent.setup();
     renderAt('/events/1');
-
-    const save = screen.getByRole('button', { name: 'Save Event' });
-    expect(save).toHaveAttribute('aria-pressed', 'false');
-
-    await user.click(save);
-    expect(save).toHaveTextContent('Saved');
-    expect(save).toHaveAttribute('aria-pressed', 'true');
-
-    await user.click(save);
-    expect(save).toHaveTextContent('Save Event');
-    expect(save).toHaveAttribute('aria-pressed', 'false');
+    await user.click(await screen.findByRole('button', { name }));
+    expect(await screen.findByRole('heading', { name: 'Login page' })).toBeInTheDocument();
   });
 
-  // RSVP button flips its label and pressed state on each click.
-  it('toggles RSVP to Going and back', async () => {
+  it('shows what the user already did', async () => {
+    mockApi(loggedIn({ 'GET /api/events/1/save': { saved: true }, 'GET /api/events/1/rsvp': { going: true } }));
+    renderAt('/events/1');
+    expect(await screen.findByRole('button', { name: 'Saved' })).toHaveAttribute('aria-pressed', 'true');
+    expect(await screen.findByRole('button', { name: 'Going' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('toggles Save Event on the server and back', async () => {
+    const { callsTo } = mockApi(loggedIn());
     const user = userEvent.setup();
     renderAt('/events/1');
-
-    const rsvp = screen.getByRole('button', { name: 'RSVP' });
-    expect(rsvp).toHaveAttribute('aria-pressed', 'false');
-
-    await user.click(rsvp);
-    expect(rsvp).toHaveTextContent('Going');
-    expect(rsvp).toHaveAttribute('aria-pressed', 'true');
-
-    await user.click(rsvp);
-    expect(rsvp).toHaveTextContent('RSVP');
-    expect(rsvp).toHaveAttribute('aria-pressed', 'false');
+    await user.click(await screen.findByRole('button', { name: 'Save Event' }));
+    await user.click(await screen.findByRole('button', { name: 'Saved' }));
+    expect(await screen.findByRole('button', { name: 'Save Event' })).toHaveAttribute('aria-pressed', 'false');
+    expect(callsTo('PUT', '/api/events/1/save')).toHaveLength(1);
+    await waitFor(() => expect(callsTo('DELETE', '/api/events/1/save')).toHaveLength(1));
   });
 
-  // Save/RSVP state doesn't carry over to the next event you open.
-  it('resets Save/RSVP when switching to a different event', async () => {
+  it('toggles RSVP on the server and back', async () => {
+    const { callsTo } = mockApi(loggedIn());
     const user = userEvent.setup();
-    renderAt('/events/1', <Link to="/events/2">Go to event 2</Link>);
+    renderAt('/events/1');
+    await user.click(await screen.findByRole('button', { name: 'RSVP' }));
+    await user.click(await screen.findByRole('button', { name: 'Going' }));
+    expect(await screen.findByRole('button', { name: 'RSVP' })).toBeInTheDocument();
+    expect(callsTo('PUT', '/api/events/1/rsvp')).toHaveLength(1);
+    await waitFor(() => expect(callsTo('DELETE', '/api/events/1/rsvp')).toHaveLength(1));
+  });
 
-    await user.click(screen.getByRole('button', { name: 'Save Event' }));
-    await user.click(screen.getByRole('button', { name: 'RSVP' }));
-    expect(screen.getByRole('button', { name: 'Saved' })).toBeInTheDocument();
-
-    await user.click(screen.getByRole('link', { name: 'Go to event 2' }));
-
-    expect(screen.getByRole('heading', { level: 1, name: 'Fall Career Fair' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Save Event' })).toHaveAttribute('aria-pressed', 'false');
+  it('undoes the change and explains when the RSVP fails', async () => {
+    mockApi(loggedIn({ 'PUT /api/events/1/rsvp': fail(500, 'Could not save your RSVP. Please try again.') }));
+    const user = userEvent.setup();
+    renderAt('/events/1');
+    await user.click(await screen.findByRole('button', { name: 'RSVP' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not save your RSVP');
     expect(screen.getByRole('button', { name: 'RSVP' })).toHaveAttribute('aria-pressed', 'false');
   });
 
-  // Back link goes to the events list page.
-  it('has a back link to the events list', () => {
-    renderAt('/events/1');
-    expect(screen.getByRole('link', { name: /back to events/i })).toHaveAttribute('href', '/');
-  });
-
-  // A bad id shows the not-found message instead of the event layout.
-  it('shows "Event not found" for an unknown id', () => {
-    renderAt('/events/999');
-
-    expect(screen.getByRole('heading', { level: 1, name: 'Event not found' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /back to events/i })).toBeInTheDocument();
-
-    expect(screen.queryByRole('button', { name: 'RSVP' })).not.toBeInTheDocument();
+  it('resets Save/RSVP when switching to a different event', async () => {
+    mockApi(loggedIn({ 'GET /api/events/1/save': { saved: true } }));
+    const user = userEvent.setup();
+    renderAt('/events/1', <Link to="/events/3">Go to event 3</Link>);
+    await screen.findByRole('button', { name: 'Saved' });
+    await user.click(screen.getByRole('link', { name: 'Go to event 3' }));
+    await screen.findByRole('heading', { level: 1, name: 'Hack Night' });
+    expect(screen.getByRole('button', { name: 'Save Event' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'RSVP' })).toHaveAttribute('aria-pressed', 'false');
   });
 });

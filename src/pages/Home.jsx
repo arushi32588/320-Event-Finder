@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { Link } from "react-router";
-import { events } from "../data/events.js";
+import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router";
+import { api } from "../lib/api.js";
+import { useSavedEvents } from "../lib/useSavedEvents.js";
 import "../theme.css";
 import "./Home.css";
 
@@ -16,48 +17,62 @@ const timeFormat = new Intl.DateTimeFormat("en-US", {
   minute: "2-digit",
   timeZone,
 });
-const dayKey = new Intl.DateTimeFormat("en-CA", { timeZone });
-
 const mainFilters = [
   { id: "today", label: "Today" },
   { id: "week", label: "This Week" },
   { id: "free", label: "Free" },
 ];
 
+// Age, Category and Indoor/Outdoor need database fields that don't exist yet,
+// so they're shown as coming soon instead of pretending to filter.
 const moreFilters = [
-  { id: "age", label: "Age" },
-  { id: "category", label: "Category" },
+  { id: "age", label: "Age", comingSoon: true },
+  { id: "category", label: "Category", comingSoon: true },
   { id: "accessible", label: "Accessible" },
-  { id: "indoor", label: "Indoor/Outdoor" },
+  { id: "indoor", label: "Indoor/Outdoor", comingSoon: true },
 ];
 
-function matchesFilter(event, filterId) {
-  const start = new Date(event.startsAt);
-  const now = new Date();
-  if (filterId === "today") return dayKey.format(start) === dayKey.format(now);
-  if (filterId === "week") {
-    const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    return start >= now && start <= weekFromNow;
-  }
-  if (filterId === "free") return event.price === "Free";
-  if (filterId === "accessible") return Boolean(event.accessibility);
-  return true;
-}
-
 export default function Home() {
+  const [params] = useSearchParams();
+  const q = params.get("q")?.trim() ?? "";
   const [active, setActive] = useState([]);
   const [showMore, setShowMore] = useState(false);
-  const [saved, setSaved] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const { savedIds, toggleSaved, error: saveError } = useSavedEvents();
 
-  function toggle(list, setList, value) {
-    setList(
-      list.includes(value) ? list.filter((v) => v !== value) : [...list, value],
+  const query = new URLSearchParams();
+  if (q) query.set("q", q);
+  active.forEach((filter) => query.append("filter", filter));
+  const queryString = query.toString();
+
+  useEffect(() => {
+    let current = true;
+    setLoading(true);
+    setError("");
+    api(`/api/events${queryString ? `?${queryString}` : ""}`)
+      .then((data) => {
+        if (current) setEvents(data.events);
+      })
+      .catch((err) => {
+        if (current) setError(err.message);
+      })
+      .finally(() => {
+        if (current) setLoading(false);
+      });
+    return () => {
+      current = false;
+    };
+  }, [queryString]);
+
+  function toggle(value) {
+    setActive(
+      active.includes(value)
+        ? active.filter((v) => v !== value)
+        : [...active, value],
     );
   }
-
-  const visible = events.filter((event) =>
-    active.every((f) => matchesFilter(event, f)),
-  );
 
   return (
     <div className="home-page">
@@ -75,7 +90,7 @@ export default function Home() {
             type="button"
             className="home-chip"
             aria-pressed={active.includes(filter.id)}
-            onClick={() => toggle(active, setActive, filter.id)}
+            onClick={() => toggle(filter.id)}
           >
             {filter.label}
           </button>
@@ -98,7 +113,9 @@ export default function Home() {
               type="button"
               className="home-chip"
               aria-pressed={active.includes(filter.id)}
-              onClick={() => toggle(active, setActive, filter.id)}
+              disabled={filter.comingSoon}
+              title={filter.comingSoon ? "Coming soon" : undefined}
+              onClick={() => toggle(filter.id)}
             >
               {filter.label}
             </button>
@@ -106,15 +123,23 @@ export default function Home() {
         </div>
       )}
 
-      <h2 className="home-section-title">Upcoming Events</h2>
+      <h2 className="home-section-title">
+        {q ? `Results for "${q}"` : "Upcoming Events"}
+      </h2>
 
-      {visible.length === 0 ? (
+      {saveError && <p className="app-error" role="alert">{saveError}</p>}
+
+      {error ? (
+        <p className="app-error" role="alert">{error}</p>
+      ) : loading ? (
+        <p className="app-message" role="status">Loading events…</p>
+      ) : events.length === 0 ? (
         <p className="home-empty">No events match these filters yet.</p>
       ) : (
         <div className="home-grid">
-          {visible.map((event) => {
+          {events.map((event) => {
             const start = new Date(event.startsAt);
-            const isSaved = saved.includes(event.id);
+            const isSaved = savedIds.includes(event.id);
             return (
               <article className="home-card" key={event.id}>
                 <Link
@@ -146,7 +171,7 @@ export default function Home() {
                     type="button"
                     className="home-save"
                     aria-pressed={isSaved}
-                    onClick={() => toggle(saved, setSaved, event.id)}
+                    onClick={() => toggleSaved(event.id)}
                   >
                     {isSaved ? "Saved" : "Save"}
                   </button>

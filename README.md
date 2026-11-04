@@ -1,25 +1,42 @@
 # Event Finder
 
-Basic React frontend skeleton using Vite and React Router. Each page contains
-only a heading and a "page working" message, with shared navigation links.
-
-The backend is a separate Next.js + TypeScript API in [`backend/`](backend/README.md).
-Run it alongside the frontend; Vite proxies `/api/*` requests to it on port 3000.
+Find local events in Amherst. A React frontend (Vite, React Router) talks to a
+Next.js + TypeScript API in [`backend/`](backend/README.md), which stores data in
+Supabase.
 
 ## Run locally
 
-Use Node.js 20.19+ or 22.12+.
+Use Node.js 20.19+ or 22.12+. The frontend and backend run separately, so use two
+terminals.
+
+```sh
+cd backend
+npm install
+cp .env.example .env.local   # add your Supabase URL and anon key
+npm run dev
+```
 
 ```sh
 npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite.
+Open the local URL printed by Vite. It forwards `/api/*` requests to the backend on
+port 3000. If that port is taken, run the backend on another one and start the
+frontend with `API_PROXY_TARGET=http://localhost:3001 npm run dev`.
+
+Without Supabase keys you can still browse sample events, but logging in, saving and
+RSVPing need a Supabase project. Run `supabase/schema.sql`, then every file in
+`supabase/migrations/` in filename order, in the Supabase SQL editor.
+
+To make someone an admin, set their `users.role` to `admin` in the Supabase table
+editor.
+
+## Tests
 
 ```sh
-npm run build
-npm run preview
+npm test                  # frontend
+npm --prefix backend test # backend
 ```
 
 ## Test the Supabase schema
@@ -44,11 +61,14 @@ variable is not already set.
 
 ## Routes
 
-- `/`: Home
-- `/events`: Events
-- `/login`: Login
-- `/profile`: Profile
-- Unknown URLs: 404 page
+- `/`: Home, with filters and search (`/?q=jazz`)
+- `/events/:id`: Event details, Save and RSVP
+- `/events/new`: Submit an event (logged in)
+- `/login`, `/signup`: Log in, create an account
+- `/profile`: Profile, saved events, RSVPs and submitted events (logged in)
+- `/saved`: Saved events (logged in)
+- `/organizer/verify`: Apply to be a verified organizer (logged in)
+- `/admin`: Review organizer requests and events (admins)
 
 ## Structure
 
