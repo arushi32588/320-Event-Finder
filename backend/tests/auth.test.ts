@@ -188,6 +188,14 @@ describe('POST /api/auth/signup', () => {
     expect((await res.json()).fields.password).toBe('Password is known to be weak');
   });
 
+  // Supabase rejects some addresses our own check accepts, like @example.com.
+  it.each(['email_address_invalid', 'validation_failed'])('returns 400 on the email field for %s', async (code) => {
+    auth.signUp.mockResolvedValue({ data: { user: null, session: null }, error: authError(code) });
+    const res = await postSignup(validSignup);
+    expect(res.status).toBe(400);
+    expect((await res.json()).fields).toEqual({ email: 'Enter a valid email address.' });
+  });
+
   it('returns 429 when Supabase rate-limits sign-ups', async () => {
     auth.signUp.mockResolvedValue({ data: { user: null, session: null }, error: authError('over_email_send_rate_limit') });
     expect((await postSignup(validSignup)).status).toBe(429);
