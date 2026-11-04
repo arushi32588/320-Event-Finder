@@ -18,10 +18,10 @@ export type VerificationRequest = {
 
 export type VerificationApplication = {
   organizationName: string;
-  description: string | null;
+  description: string;
   address: string | null;
   website: string | null;
-  contactEmail: string | null;
+  contactEmail: string;
   documentUrl: string | null;
 };
 
@@ -48,18 +48,21 @@ const MAX_DESCRIPTION = 5000;
 const MAX_ADDRESS = 255;
 const MAX_WEBSITE = 2048;
 const MAX_CONTACT_EMAIL = 255;
-const MAX_DOCUMENT_URL = 255;
+const MAX_DOCUMENT_URL = 2048;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // The custom error codes raised by the database functions, as HTTP statuses.
 const SUBMIT_ERROR_STATUS: Record<string, number> = { EF401: 401, EF409: 409 };
 
-function isWebUrl(value: string): boolean {
+// Accepts http(s) URLs and bare addresses like instagram.com/yourorg (the form's
+// placeholder), which get https:// added. Returns null for anything else.
+function normalizeWebUrl(value: string): string | null {
+  const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(value) ? value : `https://${value}`;
   try {
-    const url = new URL(value);
-    return url.protocol === 'http:' || url.protocol === 'https:';
+    const url = new URL(withScheme);
+    return (url.protocol === 'http:' || url.protocol === 'https:') && url.hostname.includes('.') ? withScheme : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -96,23 +99,25 @@ export function validateVerificationApplication(body: Record<string, unknown>): 
   }
 
   const description = optionalText(body, 'description', 'Description', MAX_DESCRIPTION, errors);
+  if (!description && !errors.description) errors.description = 'Description is required.';
   const address = optionalText(body, 'address', 'Address', MAX_ADDRESS, errors);
 
-  const website = optionalText(body, 'website', 'Website', MAX_WEBSITE, errors);
-  if (website && !errors.website && !isWebUrl(website)) errors.website = 'Website must start with http:// or https://.';
+  const rawWebsite = optionalText(body, 'website', 'Website', MAX_WEBSITE, errors);
+  const website = rawWebsite && normalizeWebUrl(rawWebsite);
+  if (rawWebsite && !website && !errors.website) errors.website = 'Enter a valid website, like instagram.com/yourorg.';
 
   const contactEmail = optionalText(body, 'contactEmail', 'Contact email', MAX_CONTACT_EMAIL, errors);
-  if (contactEmail && !errors.contactEmail && !EMAIL_PATTERN.test(contactEmail)) {
+  if (!contactEmail && !errors.contactEmail) errors.contactEmail = 'Contact email is required.';
+  else if (contactEmail && !errors.contactEmail && !EMAIL_PATTERN.test(contactEmail)) {
     errors.contactEmail = 'Enter a valid contact email address.';
   }
 
-  const documentUrl = optionalText(body, 'documentUrl', 'Document URL', MAX_DOCUMENT_URL, errors);
-  if (documentUrl && !errors.documentUrl && !isWebUrl(documentUrl)) {
-    errors.documentUrl = 'Document URL must start with http:// or https://.';
-  }
+  const rawDocumentUrl = optionalText(body, 'documentUrl', 'Document URL', MAX_DOCUMENT_URL, errors);
+  const documentUrl = rawDocumentUrl && normalizeWebUrl(rawDocumentUrl);
+  if (rawDocumentUrl && !documentUrl && !errors.documentUrl) errors.documentUrl = 'Enter a valid link to your document.';
 
   if (Object.keys(errors).length > 0) return { errors };
-  return { value: { organizationName, description, address, website, contactEmail: contactEmail?.toLowerCase() ?? null, documentUrl } };
+  return { value: { organizationName, description: description!, address, website, contactEmail: contactEmail!.toLowerCase(), documentUrl } };
 }
 
 export function toVerificationRequest(row: RequestRow): VerificationRequest {

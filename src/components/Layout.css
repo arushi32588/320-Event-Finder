@@ -89,3 +89,26 @@ html body {
 .app-main {
   padding: 0 24px;
 }
+
+.nav-logout {
+  cursor: pointer;
+  font: inherit;
+}
+
+.nav-bar form[role="search"] {
+  display: flex;
+  flex: 1;
+  max-width: 420px;
+}
+
+.nav-links .nav-logout {
+  background: none;
+}
+
+@media (max-width: 800px) {
+  .nav-bar form[role="search"] {
+    order: 1;
+    flex-basis: 100%;
+    max-width: none;
+  }
+}

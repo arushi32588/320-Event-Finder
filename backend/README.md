@@ -24,8 +24,7 @@ order, in the Supabase SQL editor. The migration adds the event fields the
 pages display (description, end time, price, ages, accessibility,
 transportation, image), `users.date_of_birth`, and a trigger that creates the
 `public.users` row whenever someone signs up.
-The admin migration adds the rejection reason and the admin-only functions behind
-the Admin Dashboard. To make someone an admin, set their `users.role` to `admin`
+To make someone an admin, set their `users.role` to `admin`
 in the Supabase table editor.
 
 ## Endpoints
@@ -37,10 +36,17 @@ in the Supabase table editor.
 | GET    | `/api/events/:id`   | `{ event }`; 400 for a non-numeric id; 404 if not found      |
 | POST   | `/api/auth/signup`  | 201 `{ user, session, needsEmailConfirmation }`; 409 if taken |
 | POST   | `/api/auth/login`   | `{ user, session }`; 401 for a wrong email or password      |
+| POST   | `/api/auth/refresh` | `{ user, session }` from `{ refreshToken }`; 401 if expired  |
 | GET    | `/api/me/profile`   | `{ profile }`; 401 if not logged in                          |
+| PATCH  | `/api/me/profile`   | `{ profile }` after updating `{ name }`                      |
+| GET    | `/api/me/rsvps`     | `{ events }` the user is going to                            |
+| GET, PUT, DELETE | `/api/events/:id/rsvp` | `{ going }`; PUT RSVPs, DELETE cancels      |
 | GET    | `/api/admin/verification-requests` | `{ requests }`; admins only                  |
 | POST   | `/api/admin/verification-requests/:id/approve` | `{ request }`; admins only       |
 | POST   | `/api/admin/verification-requests/:id/reject`  | `{ request }`; admins only       |
+| GET    | `/api/admin/events` | `{ events }` waiting for review; admins only                 |
+| POST   | `/api/admin/events/:id/approve` | `{ event }`; admins only                         |
+| POST   | `/api/admin/events/:id/reject`  | `{ event }`; admins only                         |
 
 `/api/events` query parameters (Home page):
 
@@ -68,18 +74,18 @@ The profile has `id`, `email`, `name`, `dateOfBirth`, `role`,
 Both endpoints need `Authorization: Bearer <access token>`; without a valid
 login they return 401. They call the `submit_verification_request` and
 `get_my_verification_request` database functions, so run
-`../supabase/migrations/20261103_organizer_verification_submit.sql` first.
+every file in `../supabase/migrations/` first.
 
 `POST /api/organizer/verification-request` submits an application. Body:
 
 | Field              | Required | Notes                                  |
 | ------------------ | -------- | -------------------------------------- |
 | `organizationName` | yes      | up to 255 characters                   |
-| `description`      | no       | up to 5000 characters                  |
+| `description`      | yes      | up to 5000 characters                  |
 | `address`          | no       | up to 255 characters                   |
-| `website`          | no       | `http://` or `https://`, up to 2048    |
-| `contactEmail`     | no       | a valid email, up to 255 characters    |
-| `documentUrl`      | no       | `http://` or `https://`, up to 255     |
+| `website`          | no       | a web address, up to 2048; `https://` is added if missing |
+| `contactEmail`     | yes      | a valid email, up to 255 characters    |
+| `documentUrl`      | no       | a web address, up to 2048              |
 
 It creates or updates the user's organizer profile (status `pending`) and adds
 a pending request, all in one transaction.
@@ -142,7 +148,8 @@ src/
   app/api/admin/...             Admin Dashboard: list, approve, reject
   lib/events.ts                 Event type, filters, Supabase queries
   lib/auth.ts                   Signup/login validation and error handling
-  lib/admin.ts                  Admin check, verification request review
+  lib/admin.ts                  Admin check, reviewing requests and events
+  lib/rsvps.ts                  RSVPs
   lib/supabase.ts               Supabase clients (null until configured)
   lib/profile.ts                Profile info and organizer status
 tests/                          Vitest tests

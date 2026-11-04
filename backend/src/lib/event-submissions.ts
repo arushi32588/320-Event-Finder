@@ -27,9 +27,9 @@ const MAX_PRICE_CENTS = 1_000_000;
 const ISO_DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+-]\d{2}:\d{2})$/;
 const PRICE_TEXT = /^\$?(\d{1,5})(\.(\d{1,2}))?$/;
 
-const SUBMITTED_COLUMNS = `${EVENT_COLUMNS}, approval_status`;
+export const SUBMITTED_COLUMNS = `${EVENT_COLUMNS}, approval_status`;
 
-type SubmittedEventRow = EventRow & { approval_status: ApprovalStatus };
+export type SubmittedEventRow = EventRow & { approval_status: ApprovalStatus };
 
 function optionalText(body: Record<string, unknown>, field: string, label: string, max: number, errors: FieldErrors): string | null {
   const value = body[field];
@@ -123,7 +123,7 @@ export function validateEventSubmission(body: Record<string, unknown>, now: Date
   };
 }
 
-function toSubmittedEvent(row: SubmittedEventRow): SubmittedEvent {
+export function toSubmittedEvent(row: SubmittedEventRow): SubmittedEvent {
   return { ...toEvent(row), status: row.approval_status };
 }
 

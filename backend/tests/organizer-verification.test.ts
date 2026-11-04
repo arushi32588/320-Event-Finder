@@ -103,14 +103,33 @@ describe('validateVerificationApplication', () => {
     });
   });
 
+  const required = { organizationName: 'A', description: 'B', contactEmail: 'a@b.co' };
+
+  it('requires what the form and database require', () => {
+    expect(validateVerificationApplication({})).toEqual({
+      errors: {
+        organizationName: 'Organization name is required.',
+        description: 'Description is required.',
+        contactEmail: 'Contact email is required.',
+      },
+    });
+    expect(validateVerificationApplication({ ...required, description: '   ' })).toHaveProperty('errors.description');
+  });
+
+  it('adds https:// to bare addresses, as the form suggests', () => {
+    const result = validateVerificationApplication({ ...required, website: 'instagram.com/yourorg', documentUrl: 'drive.google.com/x' });
+    expect(result).toMatchObject({ value: { website: 'https://instagram.com/yourorg', documentUrl: 'https://drive.google.com/x' } });
+    expect(validateVerificationApplication({ ...required, website: 'http://x.org' })).toMatchObject({ value: { website: 'http://x.org' } });
+  });
+
   it('rejects invalid URLs and email', () => {
-    for (const website of ['not a url', 'ftp://x.org', 'javascript:alert(1)']) {
-      const result = validateVerificationApplication({ organizationName: 'A', website });
-      expect('errors' in result && result.errors.website).toBe('Website must start with http:// or https://.');
+    for (const website of ['not a url', 'nope', 'ftp://x.org', 'javascript:alert(1)']) {
+      const result = validateVerificationApplication({ ...required, website });
+      expect('errors' in result && result.errors.website).toBe('Enter a valid website, like instagram.com/yourorg.');
     }
-    const doc = validateVerificationApplication({ organizationName: 'A', documentUrl: 'nope' });
-    expect('errors' in doc && doc.errors.documentUrl).toBe('Document URL must start with http:// or https://.');
-    const email = validateVerificationApplication({ organizationName: 'A', contactEmail: 'not-an-email' });
+    const doc = validateVerificationApplication({ ...required, documentUrl: 'nope' });
+    expect('errors' in doc && doc.errors.documentUrl).toBe('Enter a valid link to your document.');
+    const email = validateVerificationApplication({ ...required, contactEmail: 'not-an-email' });
     expect('errors' in email && email.errors.contactEmail).toBe('Enter a valid contact email address.');
   });
 });
@@ -119,7 +138,7 @@ describe('not logged in', () => {
   it('returns 401 from both endpoints', async () => {
     vi.mocked(requireUser).mockResolvedValue(Response.json({ error: 'Please log in to continue.' }, { status: 401 }));
     expect((await get()).status).toBe(401);
-    expect((await post({ organizationName: 'Hack Club' })).status).toBe(401);
+    expect((await post({ organizationName: 'Hack Club', description: 'We run hackathons.', contactEmail: 'team@hackclub.org' })).status).toBe(401);
   });
 });
 
@@ -131,7 +150,8 @@ describe('POST /api/organizer/verification-request', () => {
     expect(res.status).toBe(400);
     expect((await res.json()).fields).toEqual({
       organizationName: 'Organization name is required.',
-      website: 'Website must start with http:// or https://.',
+      description: 'Description is required.',
+      website: 'Enter a valid website, like instagram.com/yourorg.',
       contactEmail: 'Enter a valid contact email address.',
     });
     expect(rpc).not.toHaveBeenCalled();
@@ -158,7 +178,7 @@ describe('POST /api/organizer/verification-request', () => {
     const { client } = fakeRpcClient(fail('You already have a verification request pending review', 'EF409'));
     asUser(client);
 
-    const res = await post({ organizationName: 'Hack Club' });
+    const res = await post({ organizationName: 'Hack Club', description: 'We run hackathons.', contactEmail: 'team@hackclub.org' });
     expect(res.status).toBe(409);
     expect((await res.json()).error).toContain('pending');
     expect(console.error).not.toHaveBeenCalled();
@@ -168,7 +188,7 @@ describe('POST /api/organizer/verification-request', () => {
     const { client } = fakeRpcClient(fail('Your organization is already verified', 'EF409'));
     asUser(client);
 
-    const res = await post({ organizationName: 'Hack Club' });
+    const res = await post({ organizationName: 'Hack Club', description: 'We run hackathons.', contactEmail: 'team@hackclub.org' });
     expect(res.status).toBe(409);
     expect((await res.json()).error).toContain('already verified');
   });
@@ -177,7 +197,7 @@ describe('POST /api/organizer/verification-request', () => {
     const { client } = fakeRpcClient(fail('connection to db.internal refused', 'XX000'));
     asUser(client);
 
-    const res = await post({ organizationName: 'Hack Club' });
+    const res = await post({ organizationName: 'Hack Club', description: 'We run hackathons.', contactEmail: 'team@hackclub.org' });
     expect(res.status).toBe(500);
     expect(JSON.stringify(await res.json())).not.toContain('db.internal');
     expect(console.error).toHaveBeenCalled();
