@@ -1,8 +1,7 @@
 # Event Finder backend
 
-Next.js (App Router) + TypeScript API, per the team tech stack. It is API-only
-for now: every route lives under `src/app/api`. Supabase is wired in but
-optional until the database schema is built.
+Next.js (App Router) + TypeScript API. It is API-only: every route lives under
+`src/app/api`, and data and accounts live in Supabase.
 
 ## Run locally
 
@@ -11,7 +10,7 @@ Use Node.js 20.19+ or 22.12+.
 ```sh
 cd backend
 npm install
-cp .env.example .env.local   # optional: add Supabase URL + anon key
+cp .env.example .env.local   # add your Supabase URL and anon key
 npm run dev
 ```
 

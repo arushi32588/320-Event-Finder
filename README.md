@@ -1,88 +1,158 @@
 # Event Finder
 
-Find local events in Amherst. A React frontend (Vite, React Router) talks to a
-Next.js + TypeScript API in [`backend/`](backend/README.md), which stores data in
-Supabase.
+**Find your next good time.** Event Finder brings local concerts, markets, meetups and workshops into one place, so people stop hearing about events the day after they happen. Anyone can browse and filter what's on, and verified organizers build trust in what's listed.
 
-## Run locally
+![Event Finder homepage, with a "Find your next good time" headline, filters, and a grid of upcoming event cards](docs/images/homepage.png)
 
-Use Node.js 20.19+ or 22.12+. The frontend and backend run separately, so use two
-terminals.
+## Features
+
+**For everyone**
+
+- Browse upcoming events, with search and filters for Today, This Week, Free and Accessible
+- See event details, including price, ages, accessibility and transportation
+
+**With an account**
+
+- Save events and RSVP, then find them on your profile
+- Submit events for review
+- Apply to become a verified organizer, and apply again if a request is rejected
+
+**For admins**
+
+- Approve or reject organizer applications, with an optional reason
+- Approve or reject submitted events
+
+Access rules are enforced in the database with row-level security, so users can't approve their own events or give themselves extra permissions.
+
+## Tech stack
+
+| Layer | Technology |
+| --- | --- |
+| Frontend | React 19, React Router, Vite |
+| Backend | Next.js 16 (API routes), TypeScript |
+| Database and accounts | Supabase (PostgreSQL, Auth, row-level security) |
+| Testing | Vitest, Testing Library, Node test runner |
+
+```text
+Browser (React + Vite)  ->  API (Next.js, /api/*)  ->  Supabase (database and auth)
+```
+
+## Getting started
+
+### Prerequisites
+
+- Node.js 20.19+ or 22.12+
+- A [Supabase](https://supabase.com) project, unless you only want to browse sample events
+
+### 1. Set up the database
+
+In the Supabase SQL editor, run `supabase/schema.sql`, then every file in `supabase/migrations/` in filename order.
+
+### 2. Start the backend
 
 ```sh
 cd backend
 npm install
-cp .env.example .env.local   # add your Supabase URL and anon key
+cp .env.example .env.local
 npm run dev
 ```
+
+Add your project's URL and publishable (anon) key to `backend/.env.local`. Never use the secret or `service_role` key here, because it bypasses row-level security.
+
+| Variable | Where to find it |
+| --- | --- |
+| `SUPABASE_URL` | Supabase dashboard, Project Settings > API |
+| `SUPABASE_ANON_KEY` | Supabase dashboard, Project Settings > API |
+
+Without these, the API serves sample events, and account features return "not configured".
+
+### 3. Start the frontend
+
+In a second terminal, from the repository root:
 
 ```sh
 npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite. It forwards `/api/*` requests to the backend on
-port 3000. If that port is taken, run the backend on another one and start the
-frontend with `API_PROXY_TARGET=http://localhost:3001 npm run dev`.
-
-Without Supabase keys you can still browse sample events, but logging in, saving and
-RSVPing need a Supabase project. Run `supabase/schema.sql`, then every file in
-`supabase/migrations/` in filename order, in the Supabase SQL editor.
-
-To make someone an admin, set their `users.role` to `admin` in the Supabase table
-editor.
-
-## Tests
+Open the URL Vite prints. It forwards `/api/*` requests to the backend on port 3000. If that port is taken, run the backend on another one and point the frontend at it:
 
 ```sh
-npm test                  # frontend
-npm --prefix backend test # backend
+API_PROXY_TARGET=http://localhost:3001 npm run dev
 ```
 
-## Test the Supabase schema
+### 4. Create an admin (optional)
 
-`supabase/tests/` checks the rules in `supabase/schema.sql`. The files are
-split by area: users, organizers, events, announcements, RSVPs and saved
-events, and conversations and messages. They check defaults, duplicates,
-required values, a few invalid values, and what happens when a related row
-is deleted.
+Sign up in the app, then set that user's `role` to `admin` in the Supabase `users` table.
 
-The tests create temporary auth users, so they need the service role key from
-Project Settings > API. Put it in `supabase/.env` with `SUPABASE_URL`, then run:
+## Testing
+
+```sh
+npm test                   # frontend
+npm --prefix backend test  # backend API
+```
+
+The frontend and backend tests use fake API and Supabase clients, so they need no credentials.
+
+The database tests in `supabase/tests/` run against a real Supabase project and create temporary users, so they need the service role key. Put `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `supabase/.env`, then run:
 
 ```sh
 npm --prefix supabase install
 npm run test:schema
 ```
 
-The tests are skipped when either variable is missing. `npm test` also reads
-`supabase/.env.local`, then `backend/.env` and `backend/.env.local`, when a
-variable is not already set.
+They're skipped if those variables are missing. Use a development project, and never commit that key.
 
-## Routes
-
-- `/`: Home, with filters and search (`/?q=jazz`)
-- `/events/:id`: Event details, Save and RSVP
-- `/events/new`: Submit an event (logged in)
-- `/login`, `/signup`: Log in, create an account
-- `/profile`: Profile, saved events, RSVPs and submitted events (logged in)
-- `/saved`: Saved events (logged in)
-- `/organizer/verify`: Apply to be a verified organizer (logged in)
-- `/admin`: Review organizer requests and events (admins)
-
-## Structure
+## Project structure
 
 ```text
-src/
-  components/Layout.jsx  Shared navigation and page outlet
-  pages/                 Home, Events, Login, Profile, NotFound
-  App.jsx                Route definitions
-  main.jsx               React entry point and BrowserRouter
-  styles.css             Minimal spacing and typography
+.
+├── src/                 React frontend
+│   ├── components/      Layout and event posters
+│   ├── lib/             API client and login state
+│   └── pages/           One component and stylesheet per page
+├── backend/             Next.js API
+│   ├── src/app/api/     Routes
+│   ├── src/lib/         Business logic and Supabase queries
+│   └── tests/           API tests
+├── supabase/
+│   ├── schema.sql       Base tables
+│   ├── migrations/      Later changes, run in filename order
+│   └── tests/           Database tests
+└── docs/                Design specs and images
 ```
 
-UI design, authentication, event data, and other product features are not
-implemented yet. The requirements PDF provides context for future development.
+The API endpoints are documented in the [backend README](backend/README.md).
 
-For production hosting, configure a fallback to `index.html` so direct visits
-and refreshes on frontend routes work.
+## Pages
+
+| Route | Page | Access |
+| --- | --- | --- |
+| `/` | Home, with filters and search (`/?q=jazz`) | Everyone |
+| `/events/:id` | Event details, Save and RSVP | Everyone |
+| `/login`, `/signup` | Log in, create an account | Everyone |
+| `/profile` | Profile, saved events, RSVPs, submitted events | Logged in |
+| `/saved` | Saved events | Logged in |
+| `/events/new` | Submit an event | Logged in |
+| `/organizer/verify` | Apply to be a verified organizer | Logged in |
+| `/admin` | Review organizer requests and events | Admins |
+
+## Project status
+
+Event Finder is in active development and isn't deployed yet.
+
+**Planned:**
+
+- Event map
+- Google sign-in and password reset
+- File uploads for organizer verification
+- Age, category and indoor/outdoor filters
+- Hiding past events from Home
+- Messaging between attendees and organizers
+- Admin user management and reports
+
+**For deployment:** the `/api` proxy only runs in development, and the frontend calls relative `/api` paths. Production hosting has to serve the frontend and API from the same origin, or forward `/api` to the backend. It also needs to fall back to `index.html` so direct visits to frontend routes work.
+
+## Team
+
+Built by Team BlueBird: Adam Lubomirski, Arushi Agrawal (manager), Aryaman Goenka, Edelson Garcia, Kaustubha Vohra, Mariia Palamarchuk, Rudra Patel and Urvi Gupta.
