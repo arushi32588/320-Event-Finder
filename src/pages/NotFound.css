@@ -1,0 +1,20 @@
+@import './OrganizerVerification.css';
+
+.nf-page {
+  padding: 72px 0 16px;
+  text-align: center;
+}
+
+.nf-page h1 {
+  margin: 8px 0 0;
+  font-size: clamp(110px, 24vw, 240px);
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  line-height: 0.9;
+}
+
+.nf-text {
+  margin: 12px 0 26px;
+  font-size: 20px;
+  font-weight: 600;
+}

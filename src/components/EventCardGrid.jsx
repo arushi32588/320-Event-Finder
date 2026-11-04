@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+import EventPoster from "./EventPoster.jsx";
 import "../pages/Profile.css";
 
 const dateFormat = new Intl.DateTimeFormat("en-US", {
@@ -18,7 +19,9 @@ export default function EventCardGrid({ events, past = false, renderExtra }) {
           className={past ? "pf-card pf-card-past" : "pf-card"}
           key={event.id}
         >
-          {!past && <div className="pf-card-image" aria-hidden="true" />}
+          <div className="pf-card-image">
+            <EventPoster event={event} muted={past} />
+          </div>
           <div className="pf-card-body">
             <h3 className="pf-card-title">{event.title}</h3>
             <p className="pf-card-meta">

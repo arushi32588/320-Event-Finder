@@ -41,7 +41,7 @@ describe('Profile', () => {
     mockApi(routes());
     show();
     expect(await screen.findByRole('heading', { level: 1, name: 'Maya Fox' })).toBeInTheDocument();
-    expect(screen.getByText('maya@umass.edu')).toBeInTheDocument();
+    expect(screen.getByText('maya@example.org')).toBeInTheDocument();
   });
 
   it('lists saved events, and splits RSVPs into going and past', async () => {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router";
+import EventPoster from "../components/EventPoster.jsx";
 import { api } from "../lib/api.js";
 import { useSavedEvents } from "../lib/useSavedEvents.js";
 import "../theme.css";
@@ -17,6 +18,8 @@ const timeFormat = new Intl.DateTimeFormat("en-US", {
   minute: "2-digit",
   timeZone,
 });
+const VIBES = ["Live music", "Markets", "Meetups", "Workshops", "Film nights", "Club events", "Free stuff", "Food"];
+
 const mainFilters = [
   { id: "today", label: "Today" },
   { id: "week", label: "This Week" },
@@ -77,11 +80,22 @@ export default function Home() {
   return (
     <div className="home-page">
       <section className="home-hero">
-        <h1 className="home-title">Discover events happening around you</h1>
+        <h1 className="home-title">
+          Find your next <em>good time.</em>
+        </h1>
         <p className="home-subtitle">
-          Browse local events in Amherst and filter by what matters to you.
+          Concerts, markets, meetups and more around Amherst, all in one place.
+          Stop hearing about it the day after.
         </p>
       </section>
+
+      <div className="home-marquee" aria-hidden="true">
+        <div className="home-marquee-track">
+          {[...VIBES, ...VIBES, ...VIBES, ...VIBES].map((vibe, index) => (
+            <span key={index}>{vibe} ✶</span>
+          ))}
+        </div>
+      </div>
 
       <div className="home-filters" role="group" aria-label="Filter events">
         {mainFilters.map((filter) => (
@@ -132,7 +146,14 @@ export default function Home() {
       {error ? (
         <p className="app-error" role="alert">{error}</p>
       ) : loading ? (
-        <p className="app-message" role="status">Loading events…</p>
+        <>
+          <p className="app-message" role="status">Loading events…</p>
+          <div className="home-grid" aria-hidden="true">
+            <div className="home-skeleton" />
+            <div className="home-skeleton" />
+            <div className="home-skeleton" />
+          </div>
+        </>
       ) : events.length === 0 ? (
         <p className="home-empty">No events match these filters yet.</p>
       ) : (
@@ -148,7 +169,7 @@ export default function Home() {
                   aria-hidden="true"
                   tabIndex={-1}
                 >
-                  {event.imageUrl && <img src={event.imageUrl} alt="" />}
+                  <EventPoster event={event} />
                 </Link>
                 <div className="home-card-body">
                   <div className="home-card-text">

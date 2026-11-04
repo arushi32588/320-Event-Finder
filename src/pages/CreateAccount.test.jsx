@@ -18,7 +18,7 @@ function renderPageUnderTest() {
 
 async function fillIn(user) {
   await user.type(screen.getByLabelText('Full Name'), 'Maya Fox');
-  await user.type(screen.getByLabelText('Email'), 'maya@umass.edu');
+  await user.type(screen.getByLabelText('Email'), 'maya@example.org');
   await user.type(screen.getByLabelText('Date of Birth'), '05/01/2004');
   await user.type(screen.getByLabelText('Password'), 'secret-pass');
   await user.type(screen.getByLabelText('Confirm Password'), 'secret-pass');
@@ -67,7 +67,7 @@ describe('CreateAccount', () => {
     expect(await screen.findByRole('heading', { name: 'Home page' })).toBeInTheDocument();
     expect(callsTo('POST', '/api/auth/signup')[0].body).toEqual({
       name: 'Maya Fox',
-      email: 'maya@umass.edu',
+      email: 'maya@example.org',
       dateOfBirth: '05/01/2004',
       password: 'secret-pass',
       confirmPassword: 'secret-pass',

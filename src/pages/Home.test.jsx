@@ -62,8 +62,8 @@ describe("Home: page content", () => {
   it("shows the hero title, subtitle and section heading", async () => {
     mockApi(routes());
     renderHome();
-    expect(screen.getByRole("heading", { level: 1, name: "Discover events happening around you" })).toBeInTheDocument();
-    expect(screen.getByText(/browse local events in amherst/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Find your next good time." })).toBeInTheDocument();
+    expect(screen.getByText(/concerts, markets, meetups and more/i)).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "Upcoming Events" })).toBeInTheDocument();
     await loaded();
   });

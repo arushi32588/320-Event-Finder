@@ -60,7 +60,7 @@ describe("Login: page content", () => {
 });
 
 describe("Login: logging in", () => {
-  async function logIn(user, { email = "maya@umass.edu", password = "secret-pass" } = {}) {
+  async function logIn(user, { email = "maya@example.org", password = "secret-pass" } = {}) {
     await user.type(emailField(), email);
     await user.type(passwordField(), password);
     await user.click(submit());
@@ -72,7 +72,7 @@ describe("Login: logging in", () => {
     renderLogin();
     await logIn(user);
     expect(await screen.findByRole("heading", { name: "Home page" })).toBeInTheDocument();
-    expect(callsTo("POST", "/api/auth/login")[0].body).toEqual({ email: "maya@umass.edu", password: "secret-pass" });
+    expect(callsTo("POST", "/api/auth/login")[0].body).toEqual({ email: "maya@example.org", password: "secret-pass" });
     expect(getSession().accessToken).toBe("token-1");
   });
 
@@ -88,7 +88,7 @@ describe("Login: logging in", () => {
     const { callsTo } = mockApi(success);
     const user = userEvent.setup();
     renderLogin();
-    await user.type(emailField(), "maya@umass.edu");
+    await user.type(emailField(), "maya@example.org");
     await user.type(passwordField(), "secret-pass{Enter}");
     await screen.findByRole("heading", { name: "Home page" });
     expect(callsTo("POST", "/api/auth/login")).toHaveLength(1);
@@ -111,7 +111,7 @@ describe("Login: logging in", () => {
     renderLogin();
     await logIn(user);
     expect(await screen.findByRole("alert")).toHaveTextContent("Incorrect email or password.");
-    expect(emailField()).toHaveValue("maya@umass.edu");
+    expect(emailField()).toHaveValue("maya@example.org");
     expect(submit()).toBeEnabled();
     expect(getSession()).toBeNull();
   });
