@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api.js';
 import { useAuth } from '../lib/auth.jsx';
+import ImportedEvents from '../components/ImportedEvents.jsx';
 import '../theme.css';
 import './AdminDashboard.css';
 
@@ -14,6 +15,7 @@ const views = [
   { id: 'overview', label: 'Overview' },
   { id: 'organizers', label: 'Organizer Requests' },
   { id: 'events', label: 'Event Approvals' },
+  { id: 'imported', label: 'Imported Events' },
   { id: 'users', label: 'Users' },
   { id: 'reports', label: 'Reports' },
 ];
@@ -192,6 +194,8 @@ function AdminContent() {
               onDecide={decideEvent}
             />
           )}
+
+          {view === 'imported' && <ImportedEvents />}
 
           {(view === 'users' || view === 'reports') && (
             <section className="ad-section">
