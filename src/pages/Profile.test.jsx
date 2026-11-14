@@ -1,11 +1,12 @@
-import { afterEach, describe, expect, it } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router';
 import Profile from './Profile.jsx';
 import Saved from './Saved.jsx';
 import { RequireAuth } from '../lib/auth.jsx';
 import { fail, loggedInRoutes, mockApi, profile, renderPage, resetApi } from '../test/api.jsx';
+import * as images from '../lib/eventImages.js';
 
 const future = { id: '1', title: 'Future Show', startsAt: '2099-01-01T00:00:00Z', location: 'Town Hall' };
 const past = { id: '2', title: 'Old Show', startsAt: '2001-01-01T00:00:00Z', location: 'Library' };
@@ -158,5 +159,67 @@ describe('Saved page', () => {
     mockApi(routes({}, { 'GET /api/me/saved-events': fail(500, 'Could not load your saved events. Please try again.') }));
     show(<Saved />);
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not load your saved events');
+  });
+});
+
+describe('Profile: change a submitted event’s photo', () => {
+  const mine = { id: '9', title: 'My Party', status: 'pending', startsAt: '2099-01-01T00:00:00Z', imageUrl: null };
+  const withPhoto = { ...mine, imageUrl: 'https://example.org/party.jpg' };
+  const photo = () => new File(['x'], 'party.png', { type: 'image/png' });
+  const openDialog = async (user, event = mine) => {
+    mockApi(routes({}, { 'GET /api/me/events': { events: [event] } }));
+    show();
+    await user.click(await screen.findByRole('button', { name: 'Change photo for My Party' }));
+    return screen.getByRole('dialog', { name: 'Cover photo' });
+  };
+
+  beforeEach(images.resetMockImages);
+  afterEach(() => vi.restoreAllMocks());
+
+  it('only offers Change photo on events you submitted', async () => {
+    mockApi(routes({}, { 'GET /api/me/events': { events: [mine] } }));
+    show();
+    expect(await screen.findByRole('button', { name: 'Change photo for My Party' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /Change photo/ })).toHaveLength(1);
+  });
+
+  it('uploads a new photo and shows it on the card', async () => {
+    const user = userEvent.setup();
+    const dialog = await openDialog(user);
+    expect(within(dialog).getByRole('button', { name: 'Save' })).toBeDisabled();
+    await user.upload(within(dialog).getByLabelText(/Photo/), photo());
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    const card = screen.getByRole('link', { name: /My Party/ });
+    expect(card.querySelector('img')).toHaveAttribute('src', expect.stringMatching(/^blob:/));
+  });
+
+  it('removes an existing photo', async () => {
+    const remove = vi.spyOn(images, 'removeEventImage');
+    const user = userEvent.setup();
+    const dialog = await openDialog(user, withPhoto);
+    await user.click(within(dialog).getByRole('button', { name: 'Remove' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+    expect(remove).toHaveBeenCalledWith('9');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByRole('link', { name: /My Party/ }).querySelector('img')).toBeNull();
+  });
+
+  it('keeps the dialog open with the error when saving fails', async () => {
+    vi.spyOn(images, 'uploadEventImage').mockRejectedValue(new Error('Could not upload the photo. Please try again.'));
+    const user = userEvent.setup();
+    const dialog = await openDialog(user);
+    await user.upload(within(dialog).getByLabelText(/Photo/), photo());
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+    expect(await within(dialog).findByText('Could not upload the photo. Please try again.')).toBeInTheDocument();
+  });
+
+  it('closes without changes on Cancel', async () => {
+    const upload = vi.spyOn(images, 'uploadEventImage');
+    const user = userEvent.setup();
+    const dialog = await openDialog(user);
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(upload).not.toHaveBeenCalled();
   });
 });

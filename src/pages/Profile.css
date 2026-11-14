@@ -176,6 +176,27 @@ a.pf-card:hover {
   font-size: 14px;
 }
 
+.pf-card-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pf-card-wrap > .pf-card {
+  flex: 1;
+}
+
+.pf-card-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.pf-card-actions .pf-btn {
+  min-height: 38px;
+  padding: 0 14px;
+  font-size: 14px;
+}
+
 .pf-card-past {
   background: var(--paper-deep);
 }

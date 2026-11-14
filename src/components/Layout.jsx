@@ -53,6 +53,7 @@ export default function Layout() {
         <nav className="nav-links" aria-label="Main navigation">
           <NavLink to="/saved">Saved</NavLink>
           <NavLink to="/profile">Profile</NavLink>
+          {user && <NavLink to="/messages">Messages</NavLink>}
           {user && <NavLink to="/events/new">Submit Event</NavLink>}
           {user?.role === "admin" && <NavLink to="/admin">Admin</NavLink>}
           {user ? (

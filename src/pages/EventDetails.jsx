@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router';
 import EventPoster from '../components/EventPoster.jsx';
 import { api } from '../lib/api.js';
 import { useAuth } from '../lib/auth.jsx';
+import { openEventConversation } from '../lib/messages.js';
 import '../theme.css';
 import './EventDetails.css';
 
@@ -70,6 +71,7 @@ function EventDetailsContent({ event }) {
   const [saved, setSaved] = useState(false);
   const [going, setGoing] = useState(false);
   const [error, setError] = useState('');
+  const [opening, setOpening] = useState(null);
   const userId = user?.id;
 
   // Show what this user already did on this event.
@@ -104,6 +106,25 @@ function EventDetailsContent({ event }) {
       setError(err.message);
     }
   }
+
+  async function openChat(kind) {
+    if (!userId) {
+      navigate('/login', { state: { from: location.pathname } });
+      return;
+    }
+    setError('');
+    setOpening(kind);
+    try {
+      const conversation = await openEventConversation(event, kind);
+      navigate(`/messages/${conversation.id}`);
+    } catch (err) {
+      setError(err.message);
+      setOpening(null);
+    }
+  }
+
+  // Logged-out visitors can click Group chat to be sent to log in first.
+  const groupLocked = Boolean(userId) && !going;
 
   const where = [event.location, event.price, event.ages].filter(Boolean).join(' • ');
 
@@ -150,6 +171,28 @@ function EventDetailsContent({ event }) {
                 {going ? 'Going' : 'RSVP'}
               </button>
             </div>
+            <div className="ed-chat-actions">
+              <button
+                type="button"
+                className="ed-chat"
+                disabled={groupLocked || opening !== null}
+                aria-describedby={groupLocked ? 'ed-chat-hint' : undefined}
+                onClick={() => openChat('group')}
+              >
+                {opening === 'group' ? 'Opening…' : 'Group chat'}
+              </button>
+              <button
+                type="button"
+                className="ed-chat"
+                disabled={opening !== null}
+                onClick={() => openChat('direct')}
+              >
+                {opening === 'direct' ? 'Opening…' : 'Message organizer'}
+              </button>
+            </div>
+            {groupLocked && (
+              <p className="ed-chat-hint" id="ed-chat-hint">RSVP to join the group chat.</p>
+            )}
             {error && <p className="app-error" role="alert">{error}</p>}
           </div>
           <div className="ed-card ed-map">Map coming soon</div>

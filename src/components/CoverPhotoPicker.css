@@ -1,0 +1,117 @@
+.cp-picker .cp-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* Form pages style every input and label; keep the real file input hidden. */
+.cp-picker input.cp-input {
+  width: 1px;
+  min-height: 0;
+  height: 1px;
+  padding: 0;
+  border: 0;
+}
+
+/* Empty: a dashed spot on the board waiting for a poster. */
+.cp-picker .cp-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 170px;
+  margin: 0;
+  padding: 22px;
+  font-size: 16px;
+  font-weight: 500;
+  background: var(--paper);
+  border: 2px dashed var(--ink);
+  border-radius: var(--radius);
+  cursor: pointer;
+  text-align: center;
+  transition: background-color 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease;
+}
+
+.cp-picker .cp-zone:hover,
+.cp-picker .cp-zone-active {
+  background: var(--marigold);
+  border-style: solid;
+  box-shadow: var(--shadow);
+  transform: translate(-2px, -2px);
+}
+
+.cp-input:focus-visible + .cp-zone {
+  outline: 3px solid var(--cobalt);
+  outline-offset: 2px;
+}
+
+.cp-picker .cp-zone[aria-invalid='true'] {
+  border-color: var(--danger);
+  background: var(--accent-soft);
+}
+
+.cp-zone-sticker {
+  margin-bottom: 4px;
+  background: var(--pink);
+}
+
+.cp-zone-text {
+  font-weight: 700;
+}
+
+.cp-browse {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.cp-zone-active .cp-browse {
+  color: var(--ink);
+}
+
+.cp-zone-hint {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Chosen: shown the way it will look on the event card. */
+.cp-preview {
+  display: grid;
+  gap: 12px;
+}
+
+.cp-preview-poster {
+  height: 200px;
+  overflow: hidden;
+  border: var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.cp-preview-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cp-filename {
+  flex: 1 1 160px;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cp-btn {
+  min-height: 40px;
+  padding: 0 16px;
+  font-size: 14px;
+}

@@ -1,3 +1,4 @@
+import { useEventImageUrl } from "../lib/eventImages.js";
 import "./EventPoster.css";
 
 const timeZone = "America/New_York";
@@ -16,7 +17,10 @@ function artFor(id) {
 }
 
 // A generated poster for events without a photo, with the date on a ticket.
-export default function EventPoster({ event, muted = false }) {
+// `photo` overrides the event's own photo, e.g. to preview a file not yet uploaded.
+export default function EventPoster({ event, muted = false, photo }) {
+  const uploaded = useEventImageUrl(event);
+  const imageUrl = photo !== undefined ? photo : uploaded;
   const start = event.startsAt ? new Date(event.startsAt) : null;
 
   return (
@@ -25,7 +29,7 @@ export default function EventPoster({ event, muted = false }) {
       data-art={artFor(event.id)}
       aria-hidden="true"
     >
-      {event.imageUrl && <img src={event.imageUrl} alt="" />}
+      {imageUrl && <img src={imageUrl} alt="" />}
       {start && (
         <span className="poster-ticket">
           <span className="poster-weekday">{weekday.format(start)}</span>
