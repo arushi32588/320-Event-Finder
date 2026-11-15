@@ -40,6 +40,7 @@ in the Supabase table editor.
 | PATCH  | `/api/me/profile`   | `{ profile }` after updating `{ name }`                      |
 | GET    | `/api/me/rsvps`     | `{ events }` the user is going to                            |
 | GET, PUT, DELETE | `/api/events/:id/rsvp` | `{ going }`; PUT RSVPs, DELETE cancels      |
+| PUT, DELETE | `/api/me/events/:id/image` | `{ imageUrl }`; PUT uploads, DELETE removes the photo |
 | GET    | `/api/admin/verification-requests` | `{ requests }`; admins only                  |
 | POST   | `/api/admin/verification-requests/:id/approve` | `{ request }`; admins only       |
 | POST   | `/api/admin/verification-requests/:id/reject`  | `{ request }`; admins only       |
@@ -116,6 +117,17 @@ a user whose `users.role` is `admin`: 401 if not logged in, 403 otherwise.
   404 for an unknown id and 409 if the request was already reviewed. Each review
   runs as one database function, so it fully happens or doesn't happen at all.
 
+### Event photos
+
+`PUT /api/me/events/:id/image` takes a multipart form with the photo in the
+`image` field. It must be a JPEG, PNG or WebP image of 5 MB or less. The photo
+goes into the `event-images` storage bucket and its link is saved as the
+event's `imageUrl`, replacing and deleting any earlier photo. `DELETE` clears
+it and returns `{ imageUrl: null }`. Both need `Authorization: Bearer <token>`:
+400 for a bad file, 401 if not logged in, 403 if you didn't submit the event,
+404 if it doesn't exist. Run `../supabase/migrations/20261115_event_images.sql`
+first to create the bucket.
+
 Without Supabase configured, the event endpoints serve the placeholder data in
 `src/data/sample-events.ts` and the auth endpoints return 503.
 
@@ -143,6 +155,7 @@ src/
   app/api/auth/signup/route.ts  Create account
   app/api/auth/login/route.ts   Log in
   app/api/me/profile/route.ts   Profile page
+  app/api/me/events/[id]/image/route.ts  Event photo upload and removal
   data/sample-events.ts         Placeholder events (used until Supabase is configured)
   app/api/admin/...             Admin Dashboard: list, approve, reject
   lib/events.ts                 Event type, filters, Supabase queries
@@ -151,5 +164,6 @@ src/
   lib/rsvps.ts                  RSVPs
   lib/supabase.ts               Supabase clients (null until configured)
   lib/profile.ts                Profile info and organizer status
+  lib/event-images.ts           Event photo checks and storage
 tests/                          Vitest tests
 ```
