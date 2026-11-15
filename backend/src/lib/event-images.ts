@@ -7,7 +7,7 @@ type ImageType = { contentType: string; extension: string };
 
 export type EventImage = { bytes: Uint8Array; contentType: string; extension: string };
 
-type Failure = { status: number; error: string };
+export type Failure = { status: number; error: string };
 
 const IMAGE_TYPES: Record<string, ImageType> = {
   'image/jpeg': { contentType: 'image/jpeg', extension: 'jpg' },
@@ -61,7 +61,7 @@ export function storagePathFromUrl(imageUrl: string | null): string | null {
   return decodeURIComponent(imageUrl.slice(index + marker.length));
 }
 
-async function findOwnedEvent(
+export async function findOwnedEvent(
   supabase: SupabaseClient,
   userId: string,
   eventId: string,
@@ -89,7 +89,7 @@ async function setEventImage(supabase: SupabaseClient, eventId: string, imageUrl
   throw new Error(`Failed to set image for event ${eventId}: ${error.message}`);
 }
 
-async function removeStoredImage(supabase: SupabaseClient, path: string | null): Promise<void> {
+export async function removeStoredImage(supabase: SupabaseClient, path: string | null): Promise<void> {
   if (!path) return;
   const { error } = await supabase.storage.from(EVENT_IMAGE_BUCKET).remove([path]);
   if (error) console.error(`Failed to remove old event image ${path}: ${error.message}`);
