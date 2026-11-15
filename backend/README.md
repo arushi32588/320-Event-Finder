@@ -41,6 +41,9 @@ in the Supabase table editor.
 | GET    | `/api/me/rsvps`     | `{ events }` the user is going to                            |
 | GET, PUT, DELETE | `/api/events/:id/rsvp` | `{ going }`; PUT RSVPs, DELETE cancels      |
 | PUT, DELETE | `/api/me/events/:id/image` | `{ imageUrl }`; PUT uploads, DELETE removes the photo |
+| GET    | `/api/events/:id/images` | `{ images }` (gallery photos, oldest first)         |
+| POST   | `/api/me/events/:id/images` | 201 `{ image }`; 409 if the event has 6 photos   |
+| DELETE | `/api/me/events/:id/images/:imageId` | 204 after removing the photo            |
 | GET    | `/api/admin/verification-requests` | `{ requests }`; admins only                  |
 | POST   | `/api/admin/verification-requests/:id/approve` | `{ request }`; admins only       |
 | POST   | `/api/admin/verification-requests/:id/reject`  | `{ request }`; admins only       |
@@ -128,6 +131,15 @@ it and returns `{ imageUrl: null }`. Both need `Authorization: Bearer <token>`:
 404 if it doesn't exist. Run `../supabase/migrations/20261115_event_images.sql`
 first to create the bucket.
 
+Besides the cover photo, an event can have up to 6 gallery photos. `POST
+/api/me/events/:id/images` takes the same `image` upload and returns
+`{ image: { id, url } }`, with 409 once the event has 6. `DELETE
+/api/me/events/:id/images/:imageId` removes one. Both follow the same rules as
+the cover photo. `GET /api/events/:id/images` lists them as `{ images }` for
+anyone who can see the event. Run
+`../supabase/migrations/20261116_event_image_gallery.sql` after the bucket
+migration.
+
 Without Supabase configured, the event endpoints serve the placeholder data in
 `src/data/sample-events.ts` and the auth endpoints return 503.
 
@@ -156,6 +168,8 @@ src/
   app/api/auth/login/route.ts   Log in
   app/api/me/profile/route.ts   Profile page
   app/api/me/events/[id]/image/route.ts  Event photo upload and removal
+  app/api/me/events/[id]/images/...      Gallery photo upload and removal
+  app/api/events/[id]/images/route.ts    Gallery photo list
   data/sample-events.ts         Placeholder events (used until Supabase is configured)
   app/api/admin/...             Admin Dashboard: list, approve, reject
   lib/events.ts                 Event type, filters, Supabase queries
@@ -165,5 +179,6 @@ src/
   lib/supabase.ts               Supabase clients (null until configured)
   lib/profile.ts                Profile info and organizer status
   lib/event-images.ts           Event photo checks and storage
+  lib/event-gallery.ts          Gallery photos, up to 6 per event
 tests/                          Vitest tests
 ```
