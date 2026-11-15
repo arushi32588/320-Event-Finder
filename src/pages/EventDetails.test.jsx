@@ -1,9 +1,10 @@
-import { afterEach, describe, it, expect } from 'vitest';
+import { afterEach, beforeEach, describe, it, expect } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Link, Route, Routes } from 'react-router';
+import { Link, Route, Routes, useParams } from 'react-router';
 import EventDetails from './EventDetails.jsx';
 import { fail, loggedInRoutes, mockApi, renderPage, resetApi } from '../test/api.jsx';
+import { getConversation, resetMockMessages } from '../lib/messages.js';
 
 const movieNight = {
   id: '1',
@@ -165,3 +166,63 @@ describe('EventDetails: Save and RSVP', () => {
     expect(screen.getByRole('button', { name: 'RSVP' })).toHaveAttribute('aria-pressed', 'false');
   });
 });
+
+describe('EventDetails: chat', () => {
+  function renderWithMessages(path) {
+    return renderPage(
+      <Routes>
+        <Route path="/events/:id" element={<EventDetails />} />
+        <Route path="/login" element={<h1>Login page</h1>} />
+        <Route path="/messages/:conversationId" element={<MessagesStub />} />
+      </Routes>,
+      { route: path },
+    );
+  }
+
+  beforeEach(resetMockMessages);
+
+  it('locks the group chat until the user RSVPs', async () => {
+    mockApi(loggedIn());
+    const user = userEvent.setup();
+    renderWithMessages('/events/1');
+    const group = await screen.findByRole('button', { name: 'Group chat' });
+    await waitFor(() => expect(group).toBeDisabled());
+    expect(group).toHaveAccessibleDescription('RSVP to join the group chat.');
+    await user.click(screen.getByRole('button', { name: 'RSVP' }));
+    await waitFor(() => expect(group).toBeEnabled());
+    expect(screen.queryByText('RSVP to join the group chat.')).not.toBeInTheDocument();
+  });
+
+  it('opens the event’s group chat for someone going', async () => {
+    mockApi(loggedIn({ 'GET /api/events/1/rsvp': { going: true } }));
+    const user = userEvent.setup();
+    renderWithMessages('/events/1');
+    const group = await screen.findByRole('button', { name: 'Group chat' });
+    await waitFor(() => expect(group).toBeEnabled());
+    await user.click(group);
+    expect(await screen.findByRole('heading', { name: 'Conversation 101' })).toBeInTheDocument();
+  });
+
+  it('opens a private thread with the organizer', async () => {
+    mockApi(loggedIn());
+    const user = userEvent.setup();
+    renderWithMessages('/events/3');
+    await user.click(await screen.findByRole('button', { name: 'Message organizer' }));
+    const heading = await screen.findByRole('heading', { name: /^Conversation / });
+    const { conversation } = await getConversation(heading.textContent.replace('Conversation ', ''));
+    expect(conversation).toMatchObject({ kind: 'direct', title: 'Hack Club', event: { id: '3' } });
+  });
+
+  it.each(['Group chat', 'Message organizer'])('sends logged-out visitors to log in when clicking %s', async (name) => {
+    mockApi(eventRoutes);
+    const user = userEvent.setup();
+    renderWithMessages('/events/1');
+    await user.click(await screen.findByRole('button', { name }));
+    expect(await screen.findByRole('heading', { name: 'Login page' })).toBeInTheDocument();
+  });
+});
+
+function MessagesStub() {
+  const { conversationId } = useParams();
+  return <h1>Conversation {conversationId}</h1>;
+}

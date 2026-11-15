@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
+import ChangePhotoDialog from "../components/ChangePhotoDialog.jsx";
 import EventCardGrid from "../components/EventCardGrid.jsx";
 import { api } from "../lib/api.js";
 import { useAuth } from "../lib/auth.jsx";
@@ -44,6 +45,7 @@ export default function Profile() {
   const [name, setName] = useState(user.name ?? "");
   const [nameError, setNameError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [photoEvent, setPhotoEvent] = useState(null);
 
   const isRejected = user.organizerStatus === "rejected";
   const status = organizerStatus[user.organizerStatus];
@@ -199,8 +201,21 @@ export default function Profile() {
                 renderExtra={(event) => (
                   <p className="pf-card-meta">{submissionStatus[event.status]}</p>
                 )}
+                renderActions={(event) => (
+                  <button
+                    type="button"
+                    className="pf-btn"
+                    aria-label={`Change photo for ${event.title}`}
+                    onClick={() => setPhotoEvent(event)}
+                  >
+                    Change photo
+                  </button>
+                )}
               />
             </>
+          )}
+          {photoEvent && (
+            <ChangePhotoDialog event={photoEvent} onClose={() => setPhotoEvent(null)} />
           )}
         </>
       )}

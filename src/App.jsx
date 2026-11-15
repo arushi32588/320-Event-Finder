@@ -10,6 +10,7 @@ import SubmitEvent from './pages/SubmitEvent.jsx';
 import CreateAccount from './pages/CreateAccount.jsx';
 import OrganizerVerification from './pages/OrganizerVerification.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
+import Messages from './pages/Messages.jsx';
 import NotFound from './pages/NotFound.jsx';
 
 export default function App() {
@@ -25,6 +26,8 @@ export default function App() {
         <Route path="saved" element={<RequireAuth><Saved /></RequireAuth>} />
         <Route path="signup" element={<CreateAccount />} />
         <Route path="organizer/verify" element={<RequireAuth><OrganizerVerification /></RequireAuth>} />
+        <Route path="messages" element={<RequireAuth><Messages /></RequireAuth>} />
+        <Route path="messages/:conversationId" element={<RequireAuth><Messages /></RequireAuth>} />
         <Route path="admin" element={<RequireAuth><AdminDashboard /></RequireAuth>} />
         <Route path="*" element={<NotFound />} />
       </Route>

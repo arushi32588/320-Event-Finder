@@ -112,6 +112,27 @@
   padding: 0 10px;
 }
 
+.ed-chat-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.ed-chat-actions .ed-chat {
+  min-height: 44px;
+  padding: 0 10px;
+  background: var(--paper);
+  font-size: 14px;
+}
+
+.ed-info .ed-chat-hint {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .ed-map {
   display: grid;
   place-items: center;

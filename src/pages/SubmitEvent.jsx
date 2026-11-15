@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { Link } from "react-router";
+import CoverPhotoPicker from "../components/CoverPhotoPicker.jsx";
 import { api } from "../lib/api.js";
+import { uploadEventImage } from "../lib/eventImages.js";
 import "../theme.css";
 import "./OrganizerVerification.css";
 
@@ -14,7 +16,6 @@ const fields = [
   { name: "ages", label: "Age Range", type: "text", placeholder: "All ages, 18+…" },
   { name: "accessibility", label: "Accessibility", type: "text", placeholder: "Wheelchair accessible…" },
   { name: "transportation", label: "Transportation", type: "text", placeholder: "Bus / Walk / Parking" },
-  { name: "imageUrl", label: "Image Link", type: "url", placeholder: "https://…" },
   { name: "organizerName", label: "Organizer Name", type: "text" },
 ];
 
@@ -26,28 +27,61 @@ function toIso(value) {
 export default function SubmitEvent() {
   const [errors, setErrors] = useState({});
   const [message, setMessage] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [phase, setPhase] = useState(null); // null, "event" or "photo"
   const [submitted, setSubmitted] = useState(null);
+  const [photo, setPhoto] = useState(null);
+  const [preview, setPreview] = useState({ startsAt: "", price: "" });
+
+  // The photo preview shows the date ticket and Free sticker as they'll appear.
+  function handleFormChange(e) {
+    const { name, value } = e.target;
+    if (name === "startsAt" || name === "price") setPreview((old) => ({ ...old, [name]: value }));
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
     const values = Object.fromEntries(new FormData(e.currentTarget));
-    setSubmitting(true);
+    setPhase("event");
     setErrors({});
     setMessage("");
+    let event;
     try {
-      const { event } = await api("/api/me/events", {
+      ({ event } = await api("/api/me/events", {
         method: "POST",
         body: { ...values, startsAt: toIso(values.startsAt), endsAt: toIso(values.endsAt) },
-      });
-      setSubmitted(event);
+      }));
     } catch (err) {
       setErrors(err.fields ?? {});
       setMessage(err.message);
-    } finally {
-      setSubmitting(false);
+      setPhase(null);
+      return;
     }
+
+    // The event exists now, so a failed photo upload doesn't undo it.
+    let photoFailed = false;
+    if (photo) {
+      setPhase("photo");
+      try {
+        await uploadEventImage(event.id, photo);
+      } catch {
+        photoFailed = true;
+      }
+    }
+    setPhase(null);
+    setSubmitted({ event, photoFailed });
   }
+
+  let startsAt = null;
+  try {
+    startsAt = toIso(preview.startsAt);
+  } catch {
+    // Half-typed dates have no preview date yet.
+  }
+  const previewEvent = {
+    id: "new",
+    startsAt,
+    price: preview.price.trim().toLowerCase() === "free" ? "Free" : null,
+  };
 
   if (submitted) {
     return (
@@ -55,9 +89,14 @@ export default function SubmitEvent() {
         <div className="ov-card ov-success" role="status">
           <h1 className="ov-title">Event submitted!</h1>
           <p className="ov-subtitle">
-            An admin will review {submitted.title}. It appears on the site once approved, and you can
+            An admin will review {submitted.event.title}. It appears on the site once approved, and you can
             check its status on your profile.
           </p>
+          {submitted.photoFailed && (
+            <p className="app-error" role="alert">
+              Your event was submitted, but the photo didn't upload. You can add it from your profile.
+            </p>
+          )}
           <Link to="/profile" className="ov-submit ov-link-button">
             Back to Profile
           </Link>
@@ -73,7 +112,7 @@ export default function SubmitEvent() {
 
       {message && <p className="app-error" role="alert">{message}</p>}
 
-      <form className="ov-card" onSubmit={handleSubmit} noValidate>
+      <form className="ov-card" onSubmit={handleSubmit} onChange={handleFormChange} noValidate>
         {fields.map((field) => {
           const id = `event-${field.name}`;
           const error = errors[field.name];
@@ -85,23 +124,30 @@ export default function SubmitEvent() {
             "aria-describedby": error ? `${id}-error` : undefined,
           };
           return (
-            <div className="ov-field" key={field.name}>
-              <label htmlFor={id}>
-                {field.label}
-                {field.required && <span className="ov-required" aria-hidden="true"> *</span>}
-              </label>
-              {field.type === "textarea" ? (
-                <textarea {...props} rows={4} />
-              ) : (
-                <input {...props} type={field.type} />
+            <Fragment key={field.name}>
+              <div className="ov-field">
+                <label htmlFor={id}>
+                  {field.label}
+                  {field.required && <span className="ov-required" aria-hidden="true"> *</span>}
+                </label>
+                {field.type === "textarea" ? (
+                  <textarea {...props} rows={4} />
+                ) : (
+                  <input {...props} type={field.type} />
+                )}
+                {error && <p className="ov-error" id={`${id}-error`}>{error}</p>}
+              </div>
+              {field.name === "description" && (
+                <div className="ov-field">
+                  <CoverPhotoPicker id="event-photo" file={photo} onChange={setPhoto} previewEvent={previewEvent} />
+                </div>
               )}
-              {error && <p className="ov-error" id={`${id}-error`}>{error}</p>}
-            </div>
+            </Fragment>
           );
         })}
         <div className="ov-bottom-row">
-          <button type="submit" className="ov-submit" disabled={submitting}>
-            {submitting ? "Submitting…" : "Submit Event"}
+          <button type="submit" className="ov-submit" disabled={phase !== null}>
+            {phase === "photo" ? "Uploading photo…" : phase === "event" ? "Submitting…" : "Submit Event"}
           </button>
         </div>
       </form>
