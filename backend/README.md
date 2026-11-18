@@ -151,5 +151,19 @@ src/
   lib/rsvps.ts                  RSVPs
   lib/supabase.ts               Supabase clients (null until configured)
   lib/profile.ts                Profile info and organizer status
+  lib/messages.ts               Event group chat (messages stored in lib/messages-store.ts, a mock)
 tests/                          Vitest tests
 ```
+
+## Event chat 
+
+Group chat only: one chat per event, conversation id = event id. Members are
+the event's organizer and anyone who RSVPed "going". Needs a login.
+
+| Endpoint | Notes |
+| --- | --- |
+| `GET /api/me/conversations` | `{ conversations }` for events you organize or RSVPed to |
+| `GET /api/conversations/:id` | `{ conversation, messages }`, oldest first; 404 if not a member |
+| `POST /api/conversations/:id/messages` | `{ body }` (1-2000 chars) -> 201 `{ message }` |
+| `POST /api/events/:id/conversations` | `{ kind: "group" }` -> `{ conversation }`; 403 if not going |
+
