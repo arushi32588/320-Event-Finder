@@ -175,3 +175,30 @@ export async function listSubmittedEvents(supabase: SupabaseClient, userId: stri
   if (error) throw new Error(`Failed to load submitted events: ${error.message}`);
   return (data as unknown as SubmittedEventRow[]).map(toSubmittedEvent);
 }
+
+// Withdrawing deletes the event. Only the submitter can do it, and only while
+// it is pending or rejected. The delete itself carries every condition, so an
+// approval that lands at the same moment can't be undone by it.
+export async function withdrawEvent(
+  supabase: SupabaseClient,
+  userId: string,
+  id: string,
+): Promise<{ ok: true } | { status: number; error: string }> {
+  const { data, error } = await supabase
+    .from('events')
+    .delete()
+    .eq('id', id)
+    .eq('submitted_by_user_id', userId)
+    .eq('source', 'user_submission')
+    .in('approval_status', ['pending', 'rejected'])
+    .select('id')
+    .maybeSingle();
+  if (error) throw new Error(`Failed to withdraw event ${id}: ${error.message}`);
+  if (data) return { ok: true };
+
+  const existing = await supabase.from('events').select('id, submitted_by_user_id').eq('id', id).maybeSingle();
+  if (existing.error) throw new Error(`Failed to look up event ${id}: ${existing.error.message}`);
+  const row = existing.data as { id: number; submitted_by_user_id: string | null } | null;
+  if (!row || row.submitted_by_user_id !== userId) return { status: 404, error: 'Event not found' };
+  return { status: 409, error: 'This event has already been approved, so it can no longer be withdrawn' };
+}

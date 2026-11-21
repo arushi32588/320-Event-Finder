@@ -116,6 +116,19 @@ a user whose `users.role` is `admin`: 401 if not logged in, 403 otherwise.
   404 for an unknown id and 409 if the request was already reviewed. Each review
   runs as one database function, so it fully happens or doesn't happen at all.
 
+### Withdrawing and importing events
+
+`DELETE /api/me/events/:id` lets you withdraw an event you submitted, as long as
+it is still pending or rejected. It returns `{ withdrawn: true }`, 400 for a bad
+id, 404 if it isn't yours or doesn't exist, and 409 once it's approved.
+
+`POST /api/admin/events/import` (admins only) takes `{ events: [...] }`, up to
+100 at a time. Each event uses the usual submission fields plus `sourceUrl`
+(required) and `sourceName`. Events are saved as pending and matched by
+`sourceUrl`, so importing the same link twice does nothing. The reply is
+`{ created, duplicates, invalid }`, where each skipped item lists its index.
+This needs `../supabase/migrations/20261121_event_withdraw_and_import.sql`.
+
 Without Supabase configured, the event endpoints serve the placeholder data in
 `src/data/sample-events.ts` and the auth endpoints return 503.
 
