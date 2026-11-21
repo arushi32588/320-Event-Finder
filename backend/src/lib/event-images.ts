@@ -58,7 +58,11 @@ export function storagePathFromUrl(imageUrl: string | null): string | null {
   const marker = `/storage/v1/object/public/${EVENT_IMAGE_BUCKET}/`;
   const index = imageUrl.indexOf(marker);
   if (index === -1) return null;
-  return decodeURIComponent(imageUrl.slice(index + marker.length));
+  try {
+    return decodeURIComponent(imageUrl.slice(index + marker.length));
+  } catch {
+    return null;
+  }
 }
 
 export async function findOwnedEvent(

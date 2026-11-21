@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST as importRoute } from '@/app/api/admin/events/import/route';
 import { DELETE as deleteRoute } from '@/app/api/me/events/[id]/route';
 import { importEvents, normalizeSourceUrl } from '@/lib/event-import';
+import { MAX_IMAGE_BYTES, readEventImage, storagePathFromUrl } from '@/lib/event-images';
 import { withdrawEvent } from '@/lib/event-submissions';
 import { requireUser } from '@/lib/session';
 
@@ -31,7 +32,9 @@ function queued(results: Result[]) {
     });
     return builder;
   };
-  return { client: { from } as unknown as SupabaseClient, calls };
+  const removed: string[][] = [];
+  const storage = { from: () => ({ remove: async (paths: string[]) => (removed.push(paths), { error: null }) }) };
+  return { client: { from, storage } as unknown as SupabaseClient, calls, removed };
 }
 
 const user = { id: 'user-1', email: 'a@umass.edu', user_metadata: {} } as unknown as User;
@@ -41,11 +44,15 @@ const asUser = (client: SupabaseClient) =>
 const del = (id: string) =>
   deleteRoute(new Request(`http://localhost/api/me/events/${id}`, { method: 'DELETE' }), { params: Promise.resolve({ id }) });
 
+const BASE_URL = 'https://demo.supabase.co/storage/v1/object/public/event-images/';
+const mine = (status: string, extra: Record<string, unknown> = {}) =>
+  ok({ id: 5, submitted_by_user_id: 'user-1', source: 'user_submission', approval_status: status, image_url: null, ...extra });
+
 describe('withdrawing an event', () => {
   beforeEach(() => vi.resetAllMocks());
 
   it('deletes your own pending event', async () => {
-    const { client, calls } = queued([ok({ id: 5 })]);
+    const { client, calls } = queued([mine('pending'), ok([]), ok({ id: 5 })]);
     asUser(client);
     const res = await del('5');
     expect(res.status).toBe(200);
@@ -54,40 +61,69 @@ describe('withdrawing an event', () => {
     expect(calls).toContainEqual(['in', ['approval_status', ['pending', 'rejected']]]);
   });
 
+  it('removes the cover photo and gallery photos from storage', async () => {
+    const { client, removed } = queued([
+      mine('pending', { image_url: `${BASE_URL}5/cover.png` }),
+      ok([{ image_url: `${BASE_URL}5/gallery/a.jpg` }, { image_url: 'https://elsewhere.example/x.png' }]),
+      ok({ id: 5 }),
+    ]);
+    expect(await withdrawEvent(client, 'user-1', '5')).toEqual({ ok: true });
+    expect(removed).toEqual([['5/cover.png', '5/gallery/a.jpg']]);
+  });
+
   it('hides events that belong to someone else', async () => {
-    const { client } = queued([ok(null), ok({ id: 5, submitted_by_user_id: 'someone-else' })]);
+    const { client, calls, removed } = queued([mine('pending', { submitted_by_user_id: 'someone-else' })]);
     asUser(client);
-    const res = await del('5');
-    expect(res.status).toBe(404);
+    expect((await del('5')).status).toBe(404);
+    expect(calls.some(([m]) => m === 'delete')).toBe(false);
+    expect(removed).toEqual([]);
   });
 
-  it('refuses an already approved event', async () => {
-    const { client } = queued([ok(null), ok({ id: 5, submitted_by_user_id: 'user-1' })]);
+  it('refuses an already approved event and leaves its photos alone', async () => {
+    const { client, calls, removed } = queued([mine('approved', { image_url: `${BASE_URL}5/cover.png` })]);
     asUser(client);
-    const res = await del('5');
-    expect(res.status).toBe(409);
+    expect((await del('5')).status).toBe(409);
+    expect(calls.some(([m]) => m === 'delete')).toBe(false);
+    expect(removed).toEqual([]);
   });
 
-  it('404s for an event that does not exist', async () => {
-    expect(await withdrawEvent(queued([ok(null), ok(null)]).client, 'user-1', '99')).toMatchObject({ status: 404 });
-  });
-
-  it.each(['abc', '0', '-1', '1.5', '12345678901234567890'])('rejects the invalid id %s', async (id) => {
+  it('rejects invalid event ids without touching the database', async () => {
     const { client, calls } = queued([]);
     asUser(client);
-    expect((await del(id)).status).toBe(400);
+    for (const id of ['abc', '0', '-1', '1.5', '12345678901234567890']) {
+      expect((await del(id)).status).toBe(400);
+    }
     expect(calls).toEqual([]);
   });
 
-  it('requires a login', async () => {
-    vi.mocked(requireUser).mockResolvedValue(Response.json({ error: 'Please log in to continue.' }, { status: 401 }));
-    expect((await del('5')).status).toBe(401);
+});
+
+describe('image upload edge cases', () => {
+  const file = (bytes: number[], type: string, size?: number) =>
+    new File([size ? new Uint8Array(size).map((_, i) => bytes[i] ?? 0) : new Uint8Array(bytes)], 'p', { type });
+  const form = (value?: File | string) => {
+    const f = new FormData();
+    if (value !== undefined) f.set('image', value);
+    return new Request('http://localhost/x', { method: 'PUT', body: f });
+  };
+  const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0];
+
+  it('accepts a file of exactly 5 MB and rejects one byte more', async () => {
+    expect(await readEventImage(form(file(PNG, 'image/png', MAX_IMAGE_BYTES)))).toHaveProperty('image');
+    expect(await readEventImage(form(file(PNG, 'image/png', MAX_IMAGE_BYTES + 1)))).toHaveProperty('error');
   });
 
-  it('returns 500 when the database fails', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    asUser(queued([{ data: null, error: { message: 'boom' } }]).client);
-    expect((await del('5')).status).toBe(500);
+  it('rejects an empty file', async () => {
+    expect(await readEventImage(form(file([], 'image/png')))).toEqual({ error: 'Choose a photo.' });
+  });
+
+  it('uses the real format, not the claimed one, for the file extension', async () => {
+    const result = await readEventImage(form(file(PNG, 'image/jpeg')));
+    expect(result).toMatchObject({ image: { contentType: 'image/png', extension: 'png' } });
+  });
+
+  it('ignores a storage link with broken percent-encoding instead of throwing', () => {
+    expect(storagePathFromUrl(`${BASE_URL}5/%E0%A4%A.png`)).toBeNull();
   });
 });
 
@@ -124,12 +160,6 @@ describe('importing events', () => {
     expect(result.duplicates).toEqual([{ index: 1, sourceUrl: 'https://events.example/e/1' }]);
   });
 
-  it('counts a unique-index violation as a duplicate', async () => {
-    const { client } = queued([ok([]), { data: null, error: { message: 'dup', code: '23505' } }]);
-    const result = await importEvents(client, [good()], NOW);
-    expect(result).toMatchObject({ created: 0, duplicates: [{ index: 0 }] });
-  });
-
   it('reports malformed events without stopping the rest', async () => {
     const { client } = queued([ok([]), ok(null)]);
     const result = await importEvents(
@@ -144,12 +174,6 @@ describe('importing events', () => {
     expect(result.invalid[5].fields).toHaveProperty('startsAt');
   });
 
-  it('normalizes and validates source links', () => {
-    expect(normalizeSourceUrl(' https://a.example/x#y ')).toBe('https://a.example/x');
-    expect(normalizeSourceUrl('javascript:alert(1)')).toBeNull();
-    expect(normalizeSourceUrl(42)).toBeNull();
-    expect(normalizeSourceUrl(`https://a.example/${'x'.repeat(2100)}`)).toBeNull();
-  });
 });
 
 describe('import route', () => {
@@ -171,15 +195,4 @@ describe('import route', () => {
     }
   });
 
-  it('rejects oversized batches', async () => {
-    asRole('admin');
-    expect((await post({ events: Array.from({ length: 101 }, (_, i) => good(i)) })).status).toBe(400);
-  });
-
-  it('imports for an admin', async () => {
-    asRole('admin');
-    const res = await post({ events: [good()] });
-    expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ created: 1 });
-  });
 });

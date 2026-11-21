@@ -124,7 +124,8 @@ a user whose `users.role` is `admin`: 401 if not logged in, 403 otherwise.
 
 `DELETE /api/me/events/:id` lets you withdraw an event you submitted, as long as
 it is still pending or rejected. It returns `{ withdrawn: true }`, 400 for a bad
-id, 404 if it isn't yours or doesn't exist, and 409 once it's approved.
+id, 404 if it isn't yours or doesn't exist, and 409 once it's approved. Its
+uploaded photos are removed from storage too.
 
 `POST /api/admin/events/import` (admins only) takes `{ events: [...] }`, up to
 100 at a time. Each event uses the usual submission fields plus `sourceUrl`

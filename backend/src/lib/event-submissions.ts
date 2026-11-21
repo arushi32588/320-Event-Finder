@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { EVENT_COLUMNS, type EventRow } from '@/lib/event-columns';
+import { EVENT_IMAGE_BUCKET, storagePathFromUrl } from '@/lib/event-images';
 import { toEvent, type Event } from '@/lib/events';
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
@@ -176,14 +177,42 @@ export async function listSubmittedEvents(supabase: SupabaseClient, userId: stri
   return (data as unknown as SubmittedEventRow[]).map(toSubmittedEvent);
 }
 
-// Withdrawing deletes the event. Only the submitter can do it, and only while
-// it is pending or rejected. The delete itself carries every condition, so an
-// approval that lands at the same moment can't be undone by it.
+// Withdrawing deletes the event and its stored photos. Only the submitter can
+// do it, and only while it is pending or rejected. Photos go first because the
+// storage rules stop working once the event row is gone. The delete itself
+// still carries every condition, so an approval that lands at the same moment
+// can't be undone by it.
 export async function withdrawEvent(
   supabase: SupabaseClient,
   userId: string,
   id: string,
 ): Promise<{ ok: true } | { status: number; error: string }> {
+  const found = await supabase
+    .from('events')
+    .select('id, submitted_by_user_id, source, approval_status, image_url')
+    .eq('id', id)
+    .maybeSingle();
+  if (found.error) throw new Error(`Failed to look up event ${id}: ${found.error.message}`);
+  const row = found.data as {
+    submitted_by_user_id: string | null;
+    source: string;
+    approval_status: ApprovalStatus;
+    image_url: string | null;
+  } | null;
+  if (!row || row.submitted_by_user_id !== userId || row.source !== 'user_submission') {
+    return { status: 404, error: 'Event not found' };
+  }
+  if (row.approval_status === 'approved') return CANT_WITHDRAW;
+
+  const gallery = await supabase.from('event_images').select('image_url').eq('event_id', id);
+  if (gallery.error) throw new Error(`Failed to load photos for event ${id}: ${gallery.error.message}`);
+  const urls = [row.image_url, ...((gallery.data as Array<{ image_url: string }> | null) ?? []).map((g) => g.image_url)];
+  const paths = urls.map(storagePathFromUrl).filter((path): path is string => path !== null);
+  if (paths.length > 0) {
+    const { error } = await supabase.storage.from(EVENT_IMAGE_BUCKET).remove(paths);
+    if (error) console.error(`Failed to remove photos for event ${id}: ${error.message}`);
+  }
+
   const { data, error } = await supabase
     .from('events')
     .delete()
@@ -194,11 +223,7 @@ export async function withdrawEvent(
     .select('id')
     .maybeSingle();
   if (error) throw new Error(`Failed to withdraw event ${id}: ${error.message}`);
-  if (data) return { ok: true };
-
-  const existing = await supabase.from('events').select('id, submitted_by_user_id').eq('id', id).maybeSingle();
-  if (existing.error) throw new Error(`Failed to look up event ${id}: ${existing.error.message}`);
-  const row = existing.data as { id: number; submitted_by_user_id: string | null } | null;
-  if (!row || row.submitted_by_user_id !== userId) return { status: 404, error: 'Event not found' };
-  return { status: 409, error: 'This event has already been approved, so it can no longer be withdrawn' };
+  return data ? { ok: true } : CANT_WITHDRAW;
 }
+
+const CANT_WITHDRAW = { status: 409, error: 'This event has already been approved, so it can no longer be withdrawn' };
