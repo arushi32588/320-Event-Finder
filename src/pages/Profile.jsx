@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import ChangePhotoDialog from "../components/ChangePhotoDialog.jsx";
 import EventCardGrid from "../components/EventCardGrid.jsx";
+import WithdrawEventDialog from "../components/WithdrawEventDialog.jsx";
 import { api } from "../lib/api.js";
 import { useAuth } from "../lib/auth.jsx";
 import "../theme.css";
@@ -46,6 +47,8 @@ export default function Profile() {
   const [nameError, setNameError] = useState("");
   const [saving, setSaving] = useState(false);
   const [photoEvent, setPhotoEvent] = useState(null);
+  const [withdrawing, setWithdrawing] = useState(null); // event whose confirm popup is open
+  const [withdrawStatus, setWithdrawStatus] = useState("");
 
   const isRejected = user.organizerStatus === "rejected";
   const status = organizerStatus[user.organizerStatus];
@@ -105,6 +108,16 @@ export default function Profile() {
     } finally {
       setSaving(false);
     }
+  }
+
+  // The server has already deleted it, so just drop it from the list here.
+  function handleWithdrawn(event) {
+    setLists((old) => ({
+      ...old,
+      submitted: old.submitted.filter((e) => e.id !== event.id),
+    }));
+    setWithdrawStatus(`Withdrew ${event.title}.`);
+    setWithdrawing(null);
   }
 
   const now = new Date();
@@ -202,17 +215,39 @@ export default function Profile() {
                   <p className="pf-card-meta">{submissionStatus[event.status]}</p>
                 )}
                 renderActions={(event) => (
-                  <button
-                    type="button"
-                    className="pf-btn"
-                    aria-label={`Change photo for ${event.title}`}
-                    onClick={() => setPhotoEvent(event)}
-                  >
-                    Change photo
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      className="pf-btn"
+                      aria-label={`Change photo for ${event.title}`}
+                      onClick={() => setPhotoEvent(event)}
+                    >
+                      Change photo
+                    </button>
+                    {/* Only while it's still waiting for an admin. */}
+                    {event.status === "pending" && (
+                      <button
+                        type="button"
+                        className="pf-btn"
+                        aria-label={`Withdraw ${event.title}`}
+                        onClick={() => setWithdrawing(event)}
+                      >
+                        Withdraw
+                      </button>
+                    )}
+                  </>
                 )}
               />
             </>
+          )}
+          {/* Outside the section above, so it still shows after the last event is withdrawn. */}
+          {withdrawStatus && <p className="app-message" role="status">{withdrawStatus}</p>}
+          {withdrawing && (
+            <WithdrawEventDialog
+              event={withdrawing}
+              onClose={() => setWithdrawing(null)}
+              onWithdrawn={handleWithdrawn}
+            />
           )}
           {photoEvent && (
             <ChangePhotoDialog event={photoEvent} onClose={() => setPhotoEvent(null)} />

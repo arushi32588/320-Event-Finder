@@ -189,3 +189,53 @@ describe('AdminDashboard', () => {
     await waitFor(() => expect(screen.getByText('No pending events.')).toBeInTheDocument());
   });
 });
+
+// Added in the follow-up testing pass: cases the tests above didn't hit yet.
+describe('AdminDashboard: more review cases', () => {
+  it('sends no reason when an organizer is rejected with the box left empty', async () => {
+    const { callsTo } = mockApi(routes({ 'POST /api/admin/verification-requests/103/reject': { request: { id: '103', status: 'rejected' } } }));
+    const user = userEvent.setup();
+    await renderAdmin();
+    const row = within(rowFor('Pioneer Valley Food Share'));
+    await user.click(row.getByRole('button', { name: 'Review' }));
+    await user.click(row.getByRole('button', { name: 'Reject' }));
+    expect(await screen.findByText('Rejected Pioneer Valley Food Share.')).toBeInTheDocument();
+    // An empty box means the request goes out with no body at all.
+    expect(callsTo('POST', '/api/admin/verification-requests/103/reject')[0].body).toBeUndefined();
+  });
+
+  it('keeps the event and explains if approving it fails', async () => {
+    mockApi(routes({ 'POST /api/admin/events/7/approve': fail(500, 'Could not approve this event.') }));
+    const user = userEvent.setup();
+    await renderAdmin();
+    await user.click(within(rowFor('Winter Craft Fair')).getByRole('button', { name: 'Approve' }));
+    expect(await screen.findByText('Could not update Winter Craft Fair: Could not approve this event.')).toBeInTheDocument();
+    expect(rowFor('Winter Craft Fair')).toBeInTheDocument();
+  });
+});
+
+describe('AdminDashboard: review guidelines', () => {
+  it('shows organizer guidelines with the requests and event guidelines with the events', async () => {
+    mockApi(routes());
+    await renderAdmin();
+    const organizers = within(section('Pending Organizer Requests'));
+    const eventsSection = within(section('Pending Event Approvals'));
+    expect(organizers.getByText('Guidelines for reviewing organizer requests')).toBeInTheDocument();
+    expect(organizers.queryByText('Guidelines for reviewing events')).not.toBeInTheDocument();
+    expect(eventsSection.getByText('Guidelines for reviewing events')).toBeInTheDocument();
+  });
+
+  it('starts collapsed and opens to show what to approve and reject', async () => {
+    mockApi(routes());
+    const user = userEvent.setup();
+    await renderAdmin();
+    const summary = within(section('Pending Event Approvals')).getByText('Guidelines for reviewing events');
+    const details = summary.closest('details');
+    expect(details).not.toHaveAttribute('open');
+    await user.click(summary);
+    expect(details).toHaveAttribute('open');
+    expect(within(details).getByRole('heading', { name: 'Approve when…' })).toBeInTheDocument();
+    expect(within(details).getByRole('heading', { name: 'Reject when…' })).toBeInTheDocument();
+    expect(within(details).getByText(/A duplicate of an event/)).toBeInTheDocument();
+  });
+});

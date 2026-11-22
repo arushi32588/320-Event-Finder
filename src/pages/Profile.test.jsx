@@ -223,3 +223,71 @@ describe('Profile: change a submitted event’s photo', () => {
     expect(upload).not.toHaveBeenCalled();
   });
 });
+
+// Added in the follow-up testing pass.
+describe('Profile: rejected organizer, reason fails to load', () => {
+  it('still shows the status and Apply Again, just without a reason', async () => {
+    const { callsTo } = mockApi(routes({ organizerStatus: 'rejected' }, { 'GET /api/organizer/verification-request': fail(500, 'Server down') }));
+    show();
+    expect(await screen.findByText('Organizer request not approved')).toBeInTheDocument();
+    // Wait for the reason request to actually fail before checking.
+    await waitFor(() => expect(callsTo('GET', '/api/organizer/verification-request')).toHaveLength(1));
+    expect(screen.queryByText('Reason:')).not.toBeInTheDocument();
+    expect(screen.queryByText('Server down')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Apply Again' })).toBeInTheDocument();
+  });
+});
+
+describe('Profile: withdraw a pending event', () => {
+  const pending = { id: '9', title: 'My Party', status: 'pending', startsAt: '2099-01-01T00:00:00Z' };
+  const approved = { id: '10', title: 'Big Picnic', status: 'approved', startsAt: '2099-01-02T00:00:00Z' };
+  const rejected = { id: '11', title: 'Old Idea', status: 'rejected', startsAt: '2099-01-03T00:00:00Z' };
+
+  async function openConfirm(user, extraRoutes = {}) {
+    const api = mockApi(routes({}, { 'GET /api/me/events': { events: [pending, approved] }, ...extraRoutes }));
+    show();
+    await user.click(await screen.findByRole('button', { name: 'Withdraw My Party' }));
+    return { ...api, dialog: screen.getByRole('alertdialog', { name: 'Withdraw this event?' }) };
+  }
+
+  it('only offers Withdraw on events still pending review', async () => {
+    mockApi(routes({}, { 'GET /api/me/events': { events: [pending, approved, rejected] } }));
+    show();
+    expect(await screen.findByRole('button', { name: 'Withdraw My Party' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^Withdraw/ })).toHaveLength(1);
+  });
+
+  it('asks first, and Keep event closes without deleting anything', async () => {
+    const user = userEvent.setup();
+    const { dialog, callsTo } = await openConfirm(user);
+    expect(within(dialog).getByText(/can't be undone/)).toBeInTheDocument();
+    // The safe choice is focused, so a stray Enter doesn't delete.
+    expect(within(dialog).getByRole('button', { name: 'Keep event' })).toHaveFocus();
+    await user.click(within(dialog).getByRole('button', { name: 'Keep event' }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(callsTo('DELETE', '/api/me/events/9')).toHaveLength(0);
+    expect(screen.getByRole('link', { name: /My Party/ })).toBeInTheDocument();
+  });
+
+  it('deletes the event on the server and removes its card once confirmed', async () => {
+    const user = userEvent.setup();
+    const { dialog, callsTo } = await openConfirm(user, { 'DELETE /api/me/events/9': { withdrawn: true } });
+    await user.click(within(dialog).getByRole('button', { name: 'Withdraw event' }));
+    expect(await screen.findByText('Withdrew My Party.')).toBeInTheDocument();
+    expect(callsTo('DELETE', '/api/me/events/9')).toHaveLength(1);
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /My Party/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Big Picnic/ })).toBeInTheDocument();
+  });
+
+  it('keeps the event and shows the server error if withdrawing fails', async () => {
+    const user = userEvent.setup();
+    const { dialog } = await openConfirm(user, {
+      'DELETE /api/me/events/9': fail(409, 'This event has already been approved, so it can no longer be withdrawn'),
+    });
+    await user.click(within(dialog).getByRole('button', { name: 'Withdraw event' }));
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent('already been approved');
+    expect(within(dialog).getByRole('button', { name: 'Withdraw event' })).toBeEnabled();
+    expect(screen.getByRole('link', { name: /My Party/ })).toBeInTheDocument();
+  });
+});

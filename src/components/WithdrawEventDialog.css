@@ -1,0 +1,10 @@
+.wed-text {
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Red so it's obvious this is the destructive choice. */
+.cp-btn.wed-danger {
+  background: var(--danger);
+  color: #fff;
+}

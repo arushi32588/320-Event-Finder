@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../lib/api.js';
 import { useAuth } from '../lib/auth.jsx';
 import ImportedEvents from '../components/ImportedEvents.jsx';
+import ReviewGuidelines from '../components/ReviewGuidelines.jsx';
 import '../theme.css';
 import './AdminDashboard.css';
 
@@ -173,6 +174,7 @@ function AdminContent() {
             <ReviewSection
               title="Pending Organizer Requests"
               emptyText="No pending organizer requests."
+              guidelines="organizer"
               status={requestStatus}
               items={requests}
               toRow={organizerRow}
@@ -186,6 +188,7 @@ function AdminContent() {
             <ReviewSection
               title="Pending Event Approvals"
               emptyText="No pending events."
+              guidelines="event"
               status={eventStatus}
               items={events}
               toRow={eventRow}
@@ -209,11 +212,13 @@ function AdminContent() {
   );
 }
 
-function ReviewSection({ title, emptyText, status, items, toRow, expanded, onToggle, onDecide }) {
+function ReviewSection({ title, emptyText, guidelines, status, items, toRow, expanded, onToggle, onDecide }) {
   return (
     <section className="ad-section">
       <h2 className="ad-section-title">{title}</h2>
       <p className="ad-status" role="status">{status}</p>
+      {/* Shown even when the list is empty, so admins can read it any time. */}
+      <ReviewGuidelines kind={guidelines} />
 
       {items.length === 0 ? (
         <p className="ad-empty">{emptyText}</p>
