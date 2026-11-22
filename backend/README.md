@@ -167,3 +167,8 @@ the event's organizer and anyone who RSVPed "going". Needs a login.
 | `POST /api/conversations/:id/messages` | `{ body }` (1-2000 chars) -> 201 `{ message }` |
 | `POST /api/events/:id/conversations` | `{ kind: "group" }` -> `{ conversation }`; 403 if not going |
 
+messages are saved in supabase through the send_event_message and
+event_chat_messages and last_event_chat_messages database functions so run
+../supabase/migrations/20261122_event_chat.sql and
+20261122_event_chat_access.sql first. tests for the chat routes are in
+tests/messaging.test.ts.

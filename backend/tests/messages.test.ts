@@ -6,16 +6,27 @@ import { fakeSupabase } from './helpers/fake-supabase';
 type Result = { data: unknown; error: { message: string } | null };
 const ok = (data: unknown): Result => ({ data, error: null });
 
-function client(tables: Record<string, Result>) {
+function client(tables: Record<string, Result>, rpcs: Record<string, Result> = {}) {
   const fakes = Object.fromEntries(Object.entries(tables).map(([t, r]) => [t, fakeSupabase(r)]));
-  return { from: (t: string) => fakes[t].client.from(t) } as unknown as SupabaseClient;
+  const rpc = (name: string) => {
+    const result = Promise.resolve(rpcs[name] ?? ok([]));
+    return Object.assign(result, { single: () => result });
+  };
+  return { from: (t: string) => fakes[t].client.from(t), rpc } as unknown as SupabaseClient;
 }
 
 const user = (id: string) => ({ id, email: `${id}@umass.edu`, user_metadata: {} }) as unknown as User;
 const event = (organizerUserId: string, id = 7) =>
   ok({ id, title: 'Hack Night', start_time: '2027-01-01T00:00:00Z', organizer_profiles: { user_id: organizerUserId } });
 const going = ok({ status: 'going' });
-const users = ok({ name: 'Sam', email: 'sam@umass.edu', role: 'attendee', date_of_birth: null });
+const row = (id: number, body: string, senderId = 'u1', isOrganizer = false) => ({
+  id,
+  sender_id: senderId,
+  sender_name: isOrganizer ? 'Olive' : 'Sam',
+  sender_is_organizer: isOrganizer,
+  body,
+  sent_at: `2026-11-22T10:0${id}:00Z`,
+});
 
 const rejects = (promise: Promise<unknown>, status: number) =>
   promise.then(
@@ -23,12 +34,14 @@ const rejects = (promise: Promise<unknown>, status: number) =>
     (e) => { expect(e).toBeInstanceOf(ChatError); expect((e as ChatError).status).toBe(status); return e as ChatError; },
   );
 
-describe('group chat messages (mock store)', () => {
+describe('group chat messages', () => {
   it('lets an RSVPed attendee send and read messages, oldest first', async () => {
-    const db = client({ events: event('org-1', 11), rsvps: going, users });
+    const db = client(
+      { events: event('org-1', 11), rsvps: going },
+      { send_event_message: ok(row(1, 'hello')), event_chat_messages: ok([row(1, 'hello'), row(2, 'second')]) },
+    );
     const sent = await sendMessage(db, user('u1'), '11', '  hello  ');
     expect(sent).toMatchObject({ body: 'hello', mine: true, sender: { id: 'u1', name: 'Sam', isOrganizer: false } });
-    await sendMessage(db, user('u1'), '11', 'second');
 
     const { conversation, messages } = await getConversation(db, user('u1'), '11');
     expect(messages.map((m) => m.body)).toEqual(['hello', 'second']);
@@ -36,15 +49,16 @@ describe('group chat messages (mock store)', () => {
   });
 
   it('marks organizer messages and sets mine per viewer', async () => {
-    const asOrganizer = client({ events: event('org-1', 12), rsvps: ok(null), users });
-    await sendMessage(asOrganizer, user('org-1'), '12', 'welcome');
-    const viewer = client({ events: event('org-1', 12), rsvps: going, users });
+    const viewer = client(
+      { events: event('org-1', 12), rsvps: going },
+      { event_chat_messages: ok([row(1, 'welcome', 'org-1', true)]) },
+    );
     const { messages } = await getConversation(viewer, user('u2'), '12');
     expect(messages[0]).toMatchObject({ mine: false, sender: { isOrganizer: true } });
   });
 
   it('rejects empty and too-long bodies with a body field error', async () => {
-    const db = client({ events: event('org-1'), rsvps: going, users });
+    const db = client({ events: event('org-1'), rsvps: going });
     expect((await rejects(sendMessage(db, user('u1'), '7', '   '), 400)).fields).toHaveProperty('body');
     await rejects(sendMessage(db, user('u1'), '7', 'x'.repeat(2001)), 400);
     await rejects(sendMessage(db, user('u1'), '7', 42), 400);

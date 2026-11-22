@@ -1,5 +1,4 @@
 import type { SupabaseClient, User } from '@supabase/supabase-js';
-import { getAccount } from '@/lib/session';
 import { isGoing } from '@/lib/rsvps';
 import { addStoredMessage, lastStoredMessages, listStoredMessages, type StoredMessage } from '@/lib/messages-store';
 
@@ -111,7 +110,7 @@ export async function listConversations(supabase: SupabaseClient, user: User): P
     ...(organized.data as unknown as EventRow[]),
   ];
   const byId = new Map(rows.map((row) => [String(row.id), toChatEvent(row).conversation]));
-  const last = await lastStoredMessages([...byId.keys()]);
+  const last = await lastStoredMessages(supabase, [...byId.keys()]);
 
   return [...byId.values()]
     .map((c) => ({ ...c, lastMessage: toLastMessage(last.get(c.id)) }))
@@ -124,7 +123,7 @@ export async function getConversation(
   conversationId: string,
 ): Promise<{ conversation: Conversation; messages: Message[] }> {
   const event = await memberChat(supabase, user, conversationId);
-  const stored = await listStoredMessages(conversationId);
+  const stored = await listStoredMessages(supabase, conversationId);
   return {
     conversation: { ...event.conversation, lastMessage: toLastMessage(stored.at(-1)) },
     messages: stored.map((m) => toMessage(m, user.id)), // oldest first
@@ -142,15 +141,8 @@ export async function sendMessage(
     const reason = body.length < 1 ? 'Message cannot be empty.' : `Message must be ${MAX_MESSAGE_LENGTH} characters or fewer.`;
     throw new ChatError(400, reason, { body: reason });
   }
-  const event = await memberChat(supabase, user, conversationId);
-  const account = await getAccount(supabase, user);
-  const stored = await addStoredMessage({
-    conversationId,
-    senderId: user.id,
-    senderName: account.name ?? account.email ?? 'Someone',
-    senderIsOrganizer: event.organizerUserId === user.id,
-    body,
-  });
+  await memberChat(supabase, user, conversationId);
+  const stored = await addStoredMessage(supabase, conversationId, body);
   return toMessage(stored, user.id);
 }
 
@@ -165,7 +157,7 @@ export async function openEventConversation(
   const event = await loadApprovedEvent(supabase, eventId);
   if (!event) throw new ChatError(404, 'Event not found');
   if (!(await canUseChat(supabase, user, event))) throw new ChatError(403, 'RSVP to join the group chat.');
-  const last = await lastStoredMessages([eventId]);
+  const last = await lastStoredMessages(supabase, [eventId]);
   return { ...event.conversation, lastMessage: toLastMessage(last.get(eventId)) };
 }
 
