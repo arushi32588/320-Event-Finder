@@ -116,3 +116,29 @@ describe('Messages page', () => {
     expect(get).toHaveBeenCalledTimes(2);
   });
 });
+
+// Added in the follow-up testing pass: error and empty states.
+describe('Messages page: errors and empty states', () => {
+  it('shows the error when the conversation list fails to load', async () => {
+    vi.spyOn(messages, 'listConversations').mockRejectedValue(new ApiError('Could not load your conversations.', 500));
+    show();
+    const list = await screen.findByRole('navigation', { name: 'Conversations' });
+    expect(await within(list).findByRole('alert')).toHaveTextContent('Could not load your conversations.');
+  });
+
+  it('shows the server error (not "not available") when a thread fails to load', async () => {
+    vi.spyOn(messages, 'getConversation').mockRejectedValue(new ApiError('Something went wrong. Please try again.', 500));
+    show('/messages/101');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong. Please try again.');
+    expect(screen.queryByText("This conversation isn't available.")).not.toBeInTheDocument();
+  });
+
+  it('invites the first message in an empty thread', async () => {
+    // Reuse the real mock thread but pretend nobody has written in it yet.
+    const real = await messages.getConversation('102');
+    vi.spyOn(messages, 'getConversation').mockResolvedValue({ ...real, messages: [] });
+    show('/messages/102');
+    const log = await screen.findByRole('log', { name: 'Messages' });
+    expect(within(log).getByText('No messages yet. Say hello!')).toBeInTheDocument();
+  });
+});

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router';
 import Layout from '../components/Layout.jsx';
@@ -253,5 +253,38 @@ describe('Navigation bar', () => {
     await user.type(screen.getByRole('searchbox', { name: 'Search events' }), 'jazz night{Enter}');
     expect(await screen.findByRole('heading', { name: 'Home page' })).toBeInTheDocument();
     expect(screen.getByRole('searchbox', { name: 'Search events' })).toHaveValue('jazz night');
+  });
+});
+
+// Added in the follow-up testing pass: the other two ways to pick a photo.
+describe('Cover photo picker: drag and drop, and Replace', () => {
+  const show = () => renderPage(<RequireAuth><SubmitEvent /></RequireAuth>);
+  const photo = (name) => new File(['x'], name, { type: 'image/png' });
+
+  beforeEach(resetMockImages);
+  afterEach(() => vi.restoreAllMocks());
+
+  it('previews a photo dropped onto the drop zone', async () => {
+    mockApi(loggedInRoutes());
+    show();
+    const zone = (await screen.findByText(/Drop a photo here/)).closest('label');
+    // userEvent can't drag files, so fire the drop event directly.
+    fireEvent.drop(zone, { dataTransfer: { files: [photo('dropped.png')] } });
+    expect(screen.getByText('dropped.png')).toBeInTheDocument();
+    expect(document.querySelector('.cp-preview img')).toHaveAttribute('src', expect.stringMatching(/^blob:/));
+  });
+
+  it('Replace opens the file chooser and swaps in the new photo', async () => {
+    mockApi(loggedInRoutes());
+    const user = userEvent.setup();
+    show();
+    const input = await screen.findByLabelText(/Cover photo/);
+    await user.upload(input, photo('first.png'));
+    const openChooser = vi.spyOn(input, 'click');
+    await user.click(screen.getByRole('button', { name: 'Replace' }));
+    expect(openChooser).toHaveBeenCalled();
+    await user.upload(input, photo('second.png'));
+    expect(screen.getByText('second.png')).toBeInTheDocument();
+    expect(screen.queryByText('first.png')).not.toBeInTheDocument();
   });
 });
