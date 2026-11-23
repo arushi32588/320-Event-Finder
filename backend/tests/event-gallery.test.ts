@@ -30,7 +30,7 @@ const ownEvent = ok({ submitted_by_user_id: 'user-1', image_url: null });
 function fakeClient({
   events = ownEvent,
   eventImages = ok([]),
-  rpc = ok({ id: 3, image_url: `${PUBLIC_BASE}7/gallery/new.png` }),
+  rpc = ok({ id: 3, image_path: '7/gallery/new.png' }),
   upload = ok({ path: 'x' }),
 }: { events?: QueryResult; eventImages?: QueryResult; rpc?: QueryResult; upload?: QueryResult } = {}) {
   const tables: Record<string, ReturnType<typeof fakeSupabase>> = {
@@ -123,7 +123,7 @@ describe('POST /api/me/events/:id/images', () => {
     );
     expect(fake.rpc).toHaveBeenCalledWith('add_event_image', {
       p_event_id: '7',
-      p_image_url: expect.stringMatching(new RegExp(`^${PUBLIC_BASE}7/gallery/`)),
+      p_image_path: expect.stringMatching(/^7\/gallery\/[0-9a-f-]+\.png$/),
     });
   });
 
@@ -173,7 +173,7 @@ describe('DELETE /api/me/events/:id/images/:imageId', () => {
   });
 
   it('removes the photo and its stored file', async () => {
-    const fake = signIn({ rpc: ok(`${PUBLIC_BASE}7/gallery/old.png`) });
+    const fake = signIn({ rpc: ok('7/gallery/old.png') });
     const res = await remove();
     expect(res.status).toBe(204);
     expect(fake.rpc).toHaveBeenCalledWith('remove_event_image', { p_event_id: '7', p_image_id: '3' });
@@ -209,8 +209,8 @@ describe('GET /api/events/:id/images', () => {
     const fake = fakeClient({
       events: ok({ id: 7 }),
       eventImages: ok([
-        { id: 1, image_url: `${PUBLIC_BASE}7/gallery/a.png` },
-        { id: 2, image_url: `${PUBLIC_BASE}7/gallery/b.png` },
+        { id: 1, image_path: '7/gallery/a.png' },
+        { id: 2, image_path: '7/gallery/b.png' },
       ]),
     });
     vi.mocked(getSupabase).mockReturnValue(fake.client);

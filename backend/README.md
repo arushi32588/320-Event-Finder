@@ -26,6 +26,15 @@ transportation, image), `users.date_of_birth`, and a trigger that creates the
 To make someone an admin, set their `users.role` to `admin`
 in the Supabase table editor.
 
+the migrations work whether or not the newer schema.sql changes were already
+run. the two 20261122_event_chat files let conversations be group or direct
+chats with one group chat per event. messages stay when their sender is deleted
+and have to be 1 to 2000 characters. only chat members can read a chat and
+members are the event organizer and anyone going. the app sends and lists
+messages through the send_event_message and event_chat_messages and
+last_event_chat_messages database functions. gallery photos are saved as
+storage paths in event_images.image_path.
+
 ## Endpoints
 
 | Method | Path                | Returns                                                     |

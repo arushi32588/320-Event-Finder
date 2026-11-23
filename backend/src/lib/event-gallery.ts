@@ -3,7 +3,6 @@ import {
   EVENT_IMAGE_BUCKET,
   findOwnedEvent,
   removeStoredImage,
-  storagePathFromUrl,
   type EventImage,
   type Failure,
 } from '@/lib/event-images';
@@ -12,14 +11,15 @@ export const MAX_GALLERY_IMAGES = 6;
 
 export type GalleryImage = { id: string; url: string };
 
-type GalleryRow = { id: number | string; image_url: string };
+type GalleryRow = { id: number | string; image_path: string };
 
 const GALLERY_ERROR_STATUS: Record<string, number> = { EF403: 403, EF404: 404, EF409: 409 };
 
 export const IMAGE_ID_PATTERN = /^[1-9]\d{0,17}$/;
 
-function toGalleryImage(row: GalleryRow): GalleryImage {
-  return { id: String(row.id), url: row.image_url };
+function toGalleryImage(supabase: SupabaseClient, row: GalleryRow): GalleryImage {
+  const url = supabase.storage.from(EVENT_IMAGE_BUCKET).getPublicUrl(row.image_path).data.publicUrl;
+  return { id: String(row.id), url };
 }
 
 function galleryFailure(error: { code?: string; message: string }, action: string): Failure {
@@ -35,11 +35,11 @@ export async function listGalleryImages(supabase: SupabaseClient, eventId: strin
 
   const { data, error } = await supabase
     .from('event_images')
-    .select('id, image_url')
+    .select('id, image_path')
     .eq('event_id', eventId)
     .order('id', { ascending: true });
   if (error) throw new Error(`Failed to load photos for event ${eventId}: ${error.message}`);
-  return (data as GalleryRow[]).map(toGalleryImage);
+  return (data as GalleryRow[]).map((row) => toGalleryImage(supabase, row));
 }
 
 export async function addGalleryImage(
@@ -56,10 +56,9 @@ export async function addGalleryImage(
   const { error: uploadError } = await bucket.upload(path, image.bytes, { contentType: image.contentType, upsert: false });
   if (uploadError) throw new Error(`Failed to upload photo for event ${eventId}: ${uploadError.message}`);
 
-  const imageUrl = bucket.getPublicUrl(path).data.publicUrl;
   let result: { data: unknown; error: { code?: string; message: string } | null };
   try {
-    result = await supabase.rpc('add_event_image', { p_event_id: eventId, p_image_url: imageUrl }).single();
+    result = await supabase.rpc('add_event_image', { p_event_id: eventId, p_image_path: path }).single();
   } catch (error) {
     await removeStoredImage(supabase, path);
     throw error;
@@ -68,7 +67,7 @@ export async function addGalleryImage(
     await removeStoredImage(supabase, path);
     return galleryFailure(result.error, `add a photo to event ${eventId}`);
   }
-  return { image: toGalleryImage(result.data as GalleryRow) };
+  return { image: toGalleryImage(supabase, result.data as GalleryRow) };
 }
 
 export async function removeGalleryImage(
@@ -83,6 +82,6 @@ export async function removeGalleryImage(
   const { data, error } = await supabase.rpc('remove_event_image', { p_event_id: eventId, p_image_id: imageId });
   if (error) return galleryFailure(error, `remove photo ${imageId} from event ${eventId}`);
 
-  await removeStoredImage(supabase, storagePathFromUrl(data as string | null));
+  await removeStoredImage(supabase, data as string | null);
   return { removed: true };
 }
