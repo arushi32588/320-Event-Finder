@@ -168,12 +168,18 @@ describe('AdminDashboard', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Pending Event Approvals' })).toBeInTheDocument();
   });
 
-  it('shows Coming soon for Users', async () => {
-    mockApi(routes());
+  it('opens the Users and Reports tabs with no Coming soon placeholder', async () => {
+    mockApi(routes({
+      'GET /api/admin/users': fail(404, 'Not found'),
+      'GET /api/admin/reports': fail(404, 'Not found'),
+    }));
     const user = userEvent.setup();
     await renderAdmin();
     await user.click(screen.getByRole('button', { name: 'Users' }));
-    expect(screen.getByText('Coming soon.')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 2, name: 'Users' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Reports' }));
+    expect(await screen.findByRole('heading', { level: 2, name: 'Reports' })).toBeInTheDocument();
+    expect(screen.queryByText('Coming soon.')).not.toBeInTheDocument();
   });
 
   it('shows the empty state once every event is approved', async () => {
