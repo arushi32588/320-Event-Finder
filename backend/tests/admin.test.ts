@@ -60,7 +60,8 @@ const signedOut = () => {
 
 const list = (qs = '') => listRoute(new Request(`${BASE}${qs}`));
 const post = (id: string, init?: RequestInit) => new Request(`${BASE}/${id}/review`, { method: 'POST', ...init });
-const approve = (id = '7') => approveRoute(post(id), { params: Promise.resolve({ id }) });
+const approve = (id = '7', body?: string) =>
+  approveRoute(post(id, body === undefined ? undefined : { body }), { params: Promise.resolve({ id }) });
 const reject = (id = '7', body?: string) =>
   rejectRoute(post(id, body === undefined ? undefined : { body }), { params: Promise.resolve({ id }) });
 
@@ -248,6 +249,17 @@ describe('POST /api/admin/verification-requests/:id/approve', () => {
     });
   });
 
+  it('ignores a reason body and still clears the rejection reason', async () => {
+    const { rpc } = signIn('admin', ok(reviewed));
+    const res = await approve('7', '{"reason":"should be ignored"}');
+    expect(res.status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith('review_verification_request', {
+      p_request_id: '7',
+      p_decision: 'approved',
+      p_rejection_reason: null,
+    });
+  });
+
   it.each(['abc', '0', '-1', '1.5'])('returns 400 for the invalid id %j without calling the database function', async (id) => {
     const { rpc } = signIn('admin');
     expect((await approve(id)).status).toBe(400);
@@ -316,5 +328,27 @@ describe('POST /api/admin/verification-requests/:id/reject', () => {
   it('returns 409 for a request that was already reviewed', async () => {
     signIn('admin', failed('This request has already been reviewed', 'EF409'));
     expect((await reject()).status).toBe(409);
+  });
+
+  it.each([
+    ['EF404', 404, 'Verification request not found'],
+    ['EF403', 403, 'Admins only'],
+  ])('maps database error %s to %i', async (code, status, message) => {
+    signIn('admin', failed(message, code));
+    const res = await reject();
+    expect(res.status).toBe(status);
+    expect(await res.json()).toEqual({ error: message });
+  });
+
+  it('accepts a reason at the length limit', async () => {
+    const reason = 'x'.repeat(MAX_REJECTION_REASON_LENGTH);
+    const { rpc } = signIn('admin', ok({ ...rejected, rejection_reason: reason }));
+    const res = await reject('7', JSON.stringify({ reason }));
+    expect(res.status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith('review_verification_request', {
+      p_request_id: '7',
+      p_decision: 'rejected',
+      p_rejection_reason: reason,
+    });
   });
 });
