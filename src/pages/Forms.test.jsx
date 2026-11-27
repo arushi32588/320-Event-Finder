@@ -97,6 +97,50 @@ describe('Submit event form', () => {
   });
 });
 
+describe('Submit event form: registration link', () => {
+  const show = () => renderPage(<RequireAuth><SubmitEvent /></RequireAuth>);
+  const created = { event: { id: '9', title: 'My Party', status: 'pending' } };
+
+  async function fillRequired(user) {
+    await user.type(await screen.findByLabelText(/Event Name/), 'My Party');
+    await user.type(screen.getByLabelText(/Starts/), '2099-01-02T18:30');
+  }
+
+  it('sends the registration link with the event', async () => {
+    const { callsTo } = mockApi({ ...loggedInRoutes(), 'POST /api/me/events': created });
+    const user = userEvent.setup();
+    show();
+    await fillRequired(user);
+    await user.type(screen.getByLabelText('Registration / Payment Link'), ' https://tickets.example.org/party ');
+    await user.click(screen.getByRole('button', { name: 'Submit Event' }));
+    expect(await screen.findByRole('heading', { name: 'Event submitted!' })).toBeInTheDocument();
+    expect(callsTo('POST', '/api/me/events')[0].body.registrationUrl).toBe('https://tickets.example.org/party');
+  });
+
+  it('leaves the link out when it is blank', async () => {
+    const { callsTo } = mockApi({ ...loggedInRoutes(), 'POST /api/me/events': created });
+    const user = userEvent.setup();
+    show();
+    await fillRequired(user);
+    await user.click(screen.getByRole('button', { name: 'Submit Event' }));
+    await screen.findByRole('heading', { name: 'Event submitted!' });
+    expect(callsTo('POST', '/api/me/events')[0].body).not.toHaveProperty('registrationUrl');
+  });
+
+  it('refuses a link that is not a web address without calling the backend', async () => {
+    const { callsTo } = mockApi({ ...loggedInRoutes(), 'POST /api/me/events': created });
+    const user = userEvent.setup();
+    show();
+    await fillRequired(user);
+    const field = screen.getByLabelText('Registration / Payment Link');
+    await user.type(field, 'javascript:alert(1)');
+    await user.click(screen.getByRole('button', { name: 'Submit Event' }));
+    expect(await screen.findByText('Link must start with http:// or https://.')).toBeInTheDocument();
+    expect(field).toHaveAttribute('aria-invalid', 'true');
+    expect(callsTo('POST', '/api/me/events')).toHaveLength(0);
+  });
+});
+
 describe('Submit event form: cover photo', () => {
   const show = () => renderPage(<RequireAuth><SubmitEvent /></RequireAuth>);
   const photo = (name = 'poster.png', type = 'image/png', size = 1000) => {

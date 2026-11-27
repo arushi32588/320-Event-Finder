@@ -1,10 +1,9 @@
-import { afterEach, beforeEach, describe, it, expect } from 'vitest';
+import { afterEach, describe, it, expect } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Link, Route, Routes, useParams } from 'react-router';
 import EventDetails from './EventDetails.jsx';
 import { fail, loggedInRoutes, mockApi, renderPage, resetApi } from '../test/api.jsx';
-import { getConversation, resetMockMessages } from '../lib/messages.js';
 
 const movieNight = {
   id: '1',
@@ -179,7 +178,7 @@ describe('EventDetails: chat', () => {
     );
   }
 
-  beforeEach(resetMockMessages);
+  const groupChat = { id: '1', kind: 'group', event: { id: '1', title: movieNight.title, startsAt: movieNight.startsAt }, title: movieNight.title, lastMessage: null };
 
   it('locks the group chat until the user RSVPs', async () => {
     mockApi(loggedIn());
@@ -193,32 +192,64 @@ describe('EventDetails: chat', () => {
     expect(screen.queryByText('RSVP to join the group chat.')).not.toBeInTheDocument();
   });
 
-  it('opens the event’s group chat for someone going', async () => {
-    mockApi(loggedIn({ 'GET /api/events/1/rsvp': { going: true } }));
+  it('opens the event’s saved group chat for someone going', async () => {
+    const { callsTo } = mockApi(loggedIn({
+      'GET /api/events/1/rsvp': { going: true },
+      'POST /api/events/1/conversations': { conversation: groupChat },
+    }));
     const user = userEvent.setup();
     renderWithMessages('/events/1');
     const group = await screen.findByRole('button', { name: 'Group chat' });
     await waitFor(() => expect(group).toBeEnabled());
     await user.click(group);
-    expect(await screen.findByRole('heading', { name: 'Conversation 101' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Conversation 1' })).toBeInTheDocument();
+    expect(callsTo('POST', '/api/events/1/conversations')[0].body).toEqual({ kind: 'group' });
   });
 
-  it('opens a private thread with the organizer', async () => {
-    mockApi(loggedIn());
+  it('shows the server’s reason when it refuses the chat', async () => {
+    mockApi(loggedIn({
+      'GET /api/events/1/rsvp': { going: true },
+      'POST /api/events/1/conversations': fail(403, 'RSVP to join the group chat.'),
+    }));
     const user = userEvent.setup();
-    renderWithMessages('/events/3');
-    await user.click(await screen.findByRole('button', { name: 'Message organizer' }));
-    const heading = await screen.findByRole('heading', { name: /^Conversation / });
-    const { conversation } = await getConversation(heading.textContent.replace('Conversation ', ''));
-    expect(conversation).toMatchObject({ kind: 'direct', title: 'Hack Club', event: { id: '3' } });
+    renderWithMessages('/events/1');
+    const group = await screen.findByRole('button', { name: 'Group chat' });
+    await waitFor(() => expect(group).toBeEnabled());
+    await user.click(group);
+    expect(await screen.findByRole('alert')).toHaveTextContent('RSVP to join the group chat.');
+    expect(group).toBeEnabled();
   });
 
-  it.each(['Group chat', 'Message organizer'])('sends logged-out visitors to log in when clicking %s', async (name) => {
+  it('only offers the group chat (no direct messages)', async () => {
+    mockApi(loggedIn());
+    renderWithMessages('/events/1');
+    await screen.findByRole('button', { name: 'Group chat' });
+    expect(screen.queryByRole('button', { name: 'Message organizer' })).not.toBeInTheDocument();
+  });
+
+  it('sends logged-out visitors to log in when clicking Group chat', async () => {
     mockApi(eventRoutes);
     const user = userEvent.setup();
     renderWithMessages('/events/1');
-    await user.click(await screen.findByRole('button', { name }));
+    await user.click(await screen.findByRole('button', { name: 'Group chat' }));
     expect(await screen.findByRole('heading', { name: 'Login page' })).toBeInTheDocument();
+  });
+});
+
+describe('EventDetails: registration link', () => {
+  it('shows the registration card with a QR code when the event has a link', async () => {
+    mockApi({ ...eventRoutes, 'GET /api/events/1': { event: { ...movieNight, registrationUrl: 'https://www.eventbrite.com/e/123' } } });
+    renderAt('/events/1');
+    const card = await screen.findByRole('region', { name: 'Register' });
+    expect(card).toHaveTextContent('via eventbrite.com');
+    expect(await screen.findByRole('img', { name: 'QR code for the registration link' })).toBeInTheDocument();
+  });
+
+  it('leaves the card out when there is no link', async () => {
+    mockApi(eventRoutes);
+    renderAt('/events/1');
+    await screen.findByRole('heading', { name: movieNight.title });
+    expect(screen.queryByRole('region', { name: /Register|Tickets/ })).not.toBeInTheDocument();
   });
 });
 

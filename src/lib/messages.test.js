@@ -1,64 +1,60 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import {
-  getConversation,
-  listConversations,
-  MAX_MESSAGE_LENGTH,
-  openEventConversation,
-  resetMockMessages,
-  sendMessage,
-} from './messages.js';
+import { afterEach, describe, expect, it } from 'vitest';
+import { fail, mockApi, resetApi } from '../test/api.jsx';
+import { getConversation, listConversations, openEventConversation, sendMessage } from './messages.js';
 
-beforeEach(resetMockMessages);
+const conversation = {
+  id: '1',
+  kind: 'group',
+  event: { id: '1', title: 'Movie Night', startsAt: '2026-10-16T23:00:00Z' },
+  title: 'Movie Night',
+  lastMessage: null,
+};
+const message = { id: '55', body: 'Hi!', sentAt: '2026-10-16T20:00:00Z', sender: { id: 'user-1', name: 'Maya Fox', isOrganizer: false }, mine: true };
 
-describe('messages (mock)', () => {
-  it('lists conversations with the most recent activity first', async () => {
-    const list = await listConversations();
-    expect(list.map((c) => c.id)).toEqual(['101', '103', '102']);
-    expect(list[0]).toMatchObject({ kind: 'group', title: 'Community Outdoor Movie Night', event: { id: '1' } });
-    expect(list[0].lastMessage.senderName).toBe('Dana Okafor');
-    expect(list[0]).not.toHaveProperty('messages');
+afterEach(resetApi);
+
+describe('messages (backend)', () => {
+  it('lists the viewer’s conversations', async () => {
+    const { callsTo } = mockApi({ 'GET /api/me/conversations': { conversations: [conversation] } });
+    await expect(listConversations()).resolves.toEqual([conversation]);
+    expect(callsTo('GET', '/api/me/conversations')).toHaveLength(1);
   });
 
-  it('marks the viewer’s own messages and organizer messages', async () => {
-    const { messages } = await getConversation('101');
-    expect(messages[0]).toMatchObject({ mine: false, sender: { name: 'Dana Okafor', isOrganizer: true } });
-    expect(messages.find((m) => m.mine).body).toBe('Thanks! Is there a rain date?');
+  it('loads one conversation with its messages', async () => {
+    mockApi({ 'GET /api/conversations/1': { conversation, messages: [message] } });
+    await expect(getConversation('1')).resolves.toEqual({ conversation, messages: [message] });
   });
 
-  it('rejects an unknown conversation with a 404', async () => {
-    await expect(getConversation('nope')).rejects.toMatchObject({ status: 404, message: "This conversation isn't available." });
+  it('passes a 404 through so the thread can say it isn’t available', async () => {
+    mockApi({ 'GET /api/conversations/9': fail(404, "This conversation isn't available.") });
+    await expect(getConversation('9')).rejects.toMatchObject({ status: 404, message: "This conversation isn't available." });
   });
 
-  it('sends a trimmed message and moves the thread to the top', async () => {
-    const message = await sendMessage('102', '  See you there!  ');
-    expect(message).toMatchObject({ body: 'See you there!', mine: true });
-    const list = await listConversations();
-    expect(list[0].id).toBe('102');
-    expect(list[0].lastMessage.body).toBe('See you there!');
+  it('escapes ids in the path', async () => {
+    const { calls } = mockApi({ 'GET /api/conversations/a%2Fb': fail(404, 'nope') });
+    await expect(getConversation('a/b')).rejects.toMatchObject({ status: 404 });
+    expect(calls[0].path).toBe('/api/conversations/a%2Fb');
   });
 
-  it('keeps the viewer’s organizer badge in threads they organize', async () => {
-    const message = await sendMessage('103', 'Doors at 6!');
-    expect(message.sender.isOrganizer).toBe(true);
+  it('sends a message and returns the saved copy', async () => {
+    const { callsTo } = mockApi({ 'POST /api/conversations/1/messages': { __status: 201, message } });
+    await expect(sendMessage('1', 'Hi!')).resolves.toEqual(message);
+    expect(callsTo('POST', '/api/conversations/1/messages')[0].body).toEqual({ body: 'Hi!' });
   });
 
-  it.each([
-    ['blank', '   ', 'Write a message first.'],
-    ['too long', 'x'.repeat(MAX_MESSAGE_LENGTH + 1), `Messages can be up to ${MAX_MESSAGE_LENGTH} characters.`],
-  ])('refuses a %s message with a field error', async (_, body, error) => {
-    await expect(sendMessage('101', body)).rejects.toMatchObject({ status: 400, fields: { body: error } });
+  it('passes the field error through when the server refuses a message', async () => {
+    mockApi({ 'POST /api/conversations/1/messages': fail(400, 'Message cannot be empty.', { body: 'Message cannot be empty.' }) });
+    await expect(sendMessage('1', ' ')).rejects.toMatchObject({ status: 400, fields: { body: 'Message cannot be empty.' } });
   });
 
-  it('finds an existing event conversation instead of making a second one', async () => {
-    const group = await openEventConversation({ id: '1', title: 'Community Outdoor Movie Night' }, 'group');
-    expect(group.id).toBe('101');
+  it('opens an event’s group chat', async () => {
+    const { callsTo } = mockApi({ 'POST /api/events/1/conversations': { conversation } });
+    await expect(openEventConversation('1')).resolves.toEqual(conversation);
+    expect(callsTo('POST', '/api/events/1/conversations')[0].body).toEqual({ kind: 'group' });
   });
 
-  it('creates a new direct thread named after the organizer', async () => {
-    const event = { id: '42', title: 'Pottery Night', startsAt: '2099-01-01T00:00:00Z', organizer: 'Clay Studio' };
-    const first = await openEventConversation(event, 'direct');
-    expect(first).toMatchObject({ kind: 'direct', title: 'Clay Studio', event: { id: '42', title: 'Pottery Night' }, lastMessage: null });
-    const again = await openEventConversation(event, 'direct');
-    expect(again.id).toBe(first.id);
+  it('passes a 403 through for someone not going', async () => {
+    mockApi({ 'POST /api/events/1/conversations': fail(403, 'RSVP to join the group chat.') });
+    await expect(openEventConversation('1')).rejects.toMatchObject({ status: 403, message: 'RSVP to join the group chat.' });
   });
 });

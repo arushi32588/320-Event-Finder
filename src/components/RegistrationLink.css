@@ -1,0 +1,60 @@
+.rl-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rl-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 1.1;
+}
+
+.rl-site {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.rl-register {
+  min-height: 48px;
+  margin-top: 4px;
+}
+
+.rl-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 0;
+}
+
+/* White, not --surface, so the code keeps the contrast scanners need. */
+.rl-qr-tile {
+  display: grid;
+  place-items: center;
+  width: 176px;
+  height: 176px;
+  padding: 8px;
+  box-sizing: border-box;
+  background: #fff;
+  border: var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  transform: rotate(-1.5deg);
+}
+
+.rl-qr-tile img {
+  display: block;
+  width: 160px;
+  height: 160px;
+}
+
+.rl-qr-caption {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
