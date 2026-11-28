@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { api } from '../lib/api.js';
 import { useAuth } from '../lib/auth.jsx';
 import ImportedEvents from '../components/ImportedEvents.jsx';
+import AdminUsers from '../components/AdminUsers.jsx';
+import AdminReports from '../components/AdminReports.jsx';
 import ReviewGuidelines from '../components/ReviewGuidelines.jsx';
 import '../theme.css';
 import './AdminDashboard.css';
@@ -144,8 +146,6 @@ function AdminContent() {
     }
   }
 
-  const current = views.find((v) => v.id === view);
-
   return (
     <div className="ad-page">
       <h1 className="ad-title">Admin Dashboard</h1>
@@ -200,12 +200,9 @@ function AdminContent() {
 
           {view === 'imported' && <ImportedEvents />}
 
-          {(view === 'users' || view === 'reports') && (
-            <section className="ad-section">
-              <h2 className="ad-section-title">{current.label}</h2>
-              <p className="ad-empty">Coming soon.</p>
-            </section>
-          )}
+          {view === 'users' && <AdminUsers />}
+
+          {view === 'reports' && <AdminReports />}
         </div>
       </div>
     </div>

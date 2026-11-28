@@ -39,7 +39,7 @@ export default function Messages() {
           {!error && !conversations && <p className="app-message" role="status">Loading conversations…</p>}
           {conversations?.length === 0 && (
             <p className="msg-empty">
-              No conversations yet. RSVP to an event to join its group chat, or message an organizer from any event page.
+              No conversations yet. RSVP to an event to join its group chat.
             </p>
           )}
           {conversations?.length > 0 && (

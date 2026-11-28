@@ -1,6 +1,7 @@
 import { Fragment, useState } from "react";
 import { Link } from "react-router";
 import CoverPhotoPicker from "../components/CoverPhotoPicker.jsx";
+import { safeWebUrl } from "../components/RegistrationLink.jsx";
 import { api } from "../lib/api.js";
 import { uploadEventImage } from "../lib/eventImages.js";
 import "../theme.css";
@@ -13,6 +14,7 @@ const fields = [
   { name: "location", label: "Location", type: "text" },
   { name: "description", label: "Description", type: "textarea" },
   { name: "price", label: "Price", type: "text", placeholder: "Free, or an amount like 12.50" },
+  { name: "registrationUrl", label: "Registration / Payment Link", type: "url", placeholder: "https://…" },
   { name: "ages", label: "Age Range", type: "text", placeholder: "All ages, 18+…" },
   { name: "accessibility", label: "Accessibility", type: "text", placeholder: "Wheelchair accessible…" },
   { name: "transportation", label: "Transportation", type: "text", placeholder: "Bus / Walk / Parking" },
@@ -40,7 +42,14 @@ export default function SubmitEvent() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    const values = Object.fromEntries(new FormData(e.currentTarget));
+    const { registrationUrl, ...values } = Object.fromEntries(new FormData(e.currentTarget));
+    const link = registrationUrl.trim();
+    if (link && !safeWebUrl(link)) {
+      setErrors({ registrationUrl: "Link must start with http:// or https://." });
+      setMessage("");
+      return;
+    }
+    if (link) values.registrationUrl = link;
     setPhase("event");
     setErrors({});
     setMessage("");

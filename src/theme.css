@@ -93,7 +93,8 @@ h3 {
 .ov-submit,
 .chat-send,
 .ed-chat,
-.cp-btn {
+.cp-btn,
+.rl-register {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -124,7 +125,8 @@ h3 {
 .ov-submit:hover,
 .chat-send:hover,
 .ed-chat:hover,
-.cp-btn:hover {
+.cp-btn:hover,
+.rl-register:hover {
   box-shadow: 4px 4px 0 var(--ink);
   transform: translate(-2px, -2px);
 }
@@ -141,7 +143,8 @@ h3 {
 .ov-submit:active,
 .chat-send:active,
 .ed-chat:active,
-.cp-btn:active {
+.cp-btn:active,
+.rl-register:active {
   box-shadow: 0 0 0 var(--ink);
   transform: translate(2px, 2px);
 }
@@ -153,7 +156,8 @@ h3 {
 .ca-submit,
 .ov-submit,
 .chat-send,
-.cp-btn-primary {
+.cp-btn-primary,
+.rl-register {
   background: var(--accent);
   color: #fff;
 }
